@@ -110,6 +110,8 @@
       wl-clipboard-rs # Required for Helix
       bluetuith # Bluetooth
       kickoff # App Launcher
+      swaylock-effects
+      swayidle
   ];
 
   fonts.packages = with pkgs; [

@@ -42,28 +42,43 @@
   services.fprintd.tod.enable = true;
   services.fprintd.tod.driver = pkgs.libfprint-2-tod1-goodix;
 
+  powerManagement.enable = true;
+  powerManagement.powertop.enable = true;
+  services.thermald.enable = true;
+  services.auto-cpufreq.enable = true;
+  services.auto-cpufreq.settings = {
+    battery = {
+      governor = "powersave";
+      turbo = "auto";
+    };
+    charger = {
+      governor = "performance";
+      turbo = "auto";
+    };
+  };
+
   services.logind.lidSwitch = "hibernate";
+  services.logind.lidSwitchExternalPower = "sleep";
+  services.logind.lidSwitchDocked = "ignore";
 
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
-    
-  hardware.graphics = {
-    enable = true;
-  };
 
-  services.xserver.videoDrivers = ["nvidia"];
-
-  hardware.nvidia = {
-    modesetting.enable = true;
-    powerManagement.enable = false;
-    powerManagement.finegrained = false;
-    open = true;
-    nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
-    prime = {
-        sync.enable = true;
-    		intelBusId = "PCI:0:2:0";
-    		nvidiaBusId = "PCI:1:0:0";
-    	};
-  };
+  # Disable dGPU to save Battery
+  boot.extraModprobeConfig = ''
+    blacklist nouveau
+    options nouveau modeset=0
+  '';
+  
+  services.udev.extraRules = ''
+    # Remove NVIDIA USB xHCI Host Controller devices, if present
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{power/control}="auto", ATTR{remove}="1"
+    # Remove NVIDIA USB Type-C UCSI devices, if present
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c8000", ATTR{power/control}="auto", ATTR{remove}="1"
+    # Remove NVIDIA Audio devices, if present
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
+    # Remove NVIDIA VGA/3D controller devices
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
+  '';
+  boot.blacklistedKernelModules = [ "nouveau" "nvidia" "nvidia_drm" "nvidia_modeset" ];    
 }

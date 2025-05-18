@@ -116,6 +116,7 @@ in
       swaylock-effects
       swayidle
       localPkgs.todui
+      glib # For gsettings
   ];
 
   fonts.packages = with pkgs; [

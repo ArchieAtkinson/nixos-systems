@@ -5,7 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, ...}@inputs:
   let
     system = "x86_64-linux";
     
@@ -17,11 +17,19 @@
       };
     };
 
+    toduiPkg = import ./todui { inherit pkgs; };
+
     in
     {
+
+      packages.${pkgs.system} = {
+        todui = toduiPkg;
+     };
+    
      nixosConfigurations = {
         nixos = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit system; };
+          system = pkgs.system;
+          specialArgs = { inherit system inputs; };
 
           modules = [
             ./nixos/configuration.nix

@@ -2,8 +2,11 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
-
+{ config, pkgs, inputs, ... }:
+let
+  # Define a local variable for your custom package
+  localPkgs = inputs.self.packages.${pkgs.system};
+in
 {
   imports =
     [ # Include the results of the hardware scan.
@@ -112,6 +115,7 @@
       kickoff # App Launcher
       swaylock-effects
       swayidle
+      localPkgs.todui
   ];
 
   fonts.packages = with pkgs; [

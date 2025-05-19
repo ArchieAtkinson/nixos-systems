@@ -17,21 +17,18 @@
       };
     };
 
-    toduiPkg = import ./todui { inherit pkgs; };
+    localPkgs = final : prev: {
+      local = pkgs.callPackage ./pkgs {};
+    };
 
     in
-    {
-
-      packages.${pkgs.system} = {
-        todui = toduiPkg;
-     };
-    
+    {    
      nixosConfigurations = {
         nixos = nixpkgs.lib.nixosSystem {
-          system = pkgs.system;
-          specialArgs = { inherit system inputs; };
+          specialArgs = { inherit inputs; };
 
           modules = [
+            { nixpkgs.overlays = [ localPkgs ]; }
             ./nixos/configuration.nix
           ];
         };

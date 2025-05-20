@@ -113,6 +113,7 @@
       swayidle
       local.todui
       glib # For gsettings
+      nil
   ];
 
   fonts.packages = with pkgs; [

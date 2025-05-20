@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   nix.settings.experimental-features = "nix-command flakes";
 
@@ -69,7 +69,7 @@
   users.users.archie = {
     isNormalUser = true;
     description = "Archie";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel"];
     shell = pkgs.fish;
   };
 
@@ -106,8 +106,19 @@
       nil
       discord
       xwayland-satellite
-      lm_sensors
+      xremap
   ];
+
+  # Couldn't get sudo-less xremap to work
+  systemd.services.xremap-system = {
+    description = "System xremap service";
+    enable = true;
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      ExecStart = "${pkgs.xremap}/bin/xremap ${config.users.users.archie.home}/.config/xremap/config.yml";
+    };
+  };
 
   fonts.packages = with pkgs; [
     font-awesome

@@ -97,7 +97,7 @@
       typos-lsp
       usbutils
       wl-clipboard-rs # Required for Helix
-      bluetuith # Bluetooth
+      bluetui # Bluetooth
       kickoff # App Launcher
       swaylock-effects
       swayidle
@@ -107,6 +107,10 @@
       discord
       xwayland-satellite
       xremap
+      ripgrep
+      fd
+      bat
+      wget
   ];
 
   # Couldn't get sudo-less xremap to work

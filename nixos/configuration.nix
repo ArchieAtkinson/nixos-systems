@@ -111,6 +111,8 @@
       fd
       bat
       wget
+      asciinema_3
+      xournalpp
   ];
 
   # Couldn't get sudo-less xremap to work

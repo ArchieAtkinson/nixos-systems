@@ -37,8 +37,8 @@
   programs.command-not-found.enable = false;
 
   services.xserver.enable = true;
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.displayManager.gdm.wayland = true;
+  services.displayManager.gdm.enable = true;
+  services.displayManager.gdm.wayland = true;
   programs.niri.enable = true;
   programs.waybar.enable = true;  
 
@@ -69,9 +69,16 @@
   users.users.archie = {
     isNormalUser = true;
     description = "Archie";
-    extraGroups = [ "networkmanager" "wheel"];
+    extraGroups = [ "networkmanager" "wheel" "docker"];
     shell = pkgs.fish;
   };
+
+  virtualisation.containers.enable = true;
+    virtualisation = {
+      docker = {
+        enable = true;
+      };
+    };
 
   nixpkgs.config.allowUnfree = true;
 
@@ -99,7 +106,6 @@
       wl-clipboard-rs # Required for Helix
       bluetui # Bluetooth
       kickoff # App Launcher
-      swaylock-effects
       swayidle
       local.todui
       glib # For gsettings
@@ -113,7 +119,12 @@
       wget
       asciinema_3
       xournalpp
-  ];
+      gemini-cli
+      podman-tui
+      kicad
+      fzf
+      hyprlock
+    ];
 
   # Couldn't get sudo-less xremap to work
   systemd.services.xremap-system = {

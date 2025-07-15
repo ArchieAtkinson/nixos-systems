@@ -16,9 +16,10 @@
         allowUnfree = true;
       };
     };
-
-    localPkgs = final : prev: {
-      local = pkgs.callPackage ./pkgs {};
+    
+    localPkgsOverlay = pkgs.callPackage ./pkgs {
+      inherit (nixpkgs) lib;
+      inherit pkgs;
     };
 
     in
@@ -28,7 +29,7 @@
           specialArgs = { inherit inputs; };
 
           modules = [
-            { nixpkgs.overlays = [ localPkgs ]; }
+            { nixpkgs.overlays = [ localPkgsOverlay ]; }
             ./nixos/configuration.nix
           ];
         };

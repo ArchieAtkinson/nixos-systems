@@ -93,37 +93,26 @@
   };
 
   environment.systemPackages = with pkgs; [
-      helix
-      lazygit
+      home-manager
       neofetch
       ghostty
-      just
-      git
       stow
-      zellij
-      typos-lsp
       usbutils
       wl-clipboard-rs # Required for Helix
       bluetui # Bluetooth
       kickoff # App Launcher
       swayidle
-      local.todui
+      local.berth
       glib # For gsettings
-      nil
       discord
       xwayland-satellite
       xremap
-      ripgrep
-      fd
-      bat
-      wget
-      asciinema_3
       xournalpp
       gemini-cli
-      podman-tui
       kicad
-      fzf
       hyprlock
+      lazydocker
+      devcontainer
     ];
 
   # Couldn't get sudo-less xremap to work

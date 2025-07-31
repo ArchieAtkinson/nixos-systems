@@ -1,7 +1,22 @@
 { config, pkgs, ... }:
+let
+
+  probersUdevRules = builtins.readFile ./../resources/69-probe-rs.rules;
+in
 {
   nix.settings.experimental-features = "nix-command flakes";
 
+  services.udev.extraRules = probersUdevRules;
+
+  services.openvpn.servers = {
+      tunnelbear = {
+        config = ''
+          config /home/archie/system/vpn/openvpn/TunnelBearIreland.ovpn
+        '';
+      };
+    };
+
+  
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
@@ -69,7 +84,7 @@
   users.users.archie = {
     isNormalUser = true;
     description = "Archie";
-    extraGroups = [ "networkmanager" "wheel" "docker"];
+    extraGroups = [ "networkmanager" "wheel" "docker" "dialout"];
     shell = pkgs.fish;
   };
 
@@ -83,7 +98,6 @@
   nixpkgs.config.allowUnfree = true;
 
   programs.firefox.enable = true;
-  programs.yazi.enable = true;
   programs.fish.enable = true;
   programs.direnv = {
     enable = true;

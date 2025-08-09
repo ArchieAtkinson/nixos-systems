@@ -81,11 +81,11 @@ in
     pulse.enable = true;
   };
 
+  users.groups.plugdev = {};
   users.users.archie = {
     isNormalUser = true;
     description = "Archie";
-    extraGroups = [ "networkmanager" "wheel" "docker" "dialout"];
-    shell = pkgs.fish;
+    extraGroups = [ "networkmanager" "wheel" "docker" "dialout"  "plugdev"];
   };
 
   virtualisation.containers.enable = true;
@@ -98,36 +98,33 @@ in
   nixpkgs.config.allowUnfree = true;
 
   programs.firefox.enable = true;
-  programs.fish.enable = true;
-  programs.direnv = {
-    enable = true;
-    silent = true;
-    enableFishIntegration = true;
-    nix-direnv.enable = true;
-  };
-
+    
+  environment.variables.NIXOS_OZONE_WL = "1";
   environment.systemPackages = with pkgs; [
       home-manager
-      neofetch
       ghostty
-      stow
       usbutils
       wl-clipboard-rs # Required for Helix
       bluetui # Bluetooth
       kickoff # App Launcher
       swayidle
-      local.berth
       glib # For gsettings
       discord
       xwayland-satellite
       xremap
       xournalpp
-      gemini-cli
       kicad
       hyprlock
-      lazydocker
-      devcontainer
+      slack
+      segger-jlink
+      vscode
     ];
+    
+  nixpkgs.config.permittedInsecurePackages = [
+    "segger-jlink-qt4-810"
+  ];
+
+  nixpkgs.config.segger-jlink.acceptLicense = true;
 
   # Couldn't get sudo-less xremap to work
   systemd.services.xremap-system = {
@@ -139,6 +136,8 @@ in
       ExecStart = "${pkgs.xremap}/bin/xremap ${config.users.users.archie.home}/.config/xremap/config.yml";
     };
   };
+
+  security.polkit.enable = true;
 
   fonts.packages = with pkgs; [
     font-awesome

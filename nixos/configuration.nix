@@ -86,6 +86,7 @@ in
     isNormalUser = true;
     description = "Archie";
     extraGroups = [ "networkmanager" "wheel" "docker" "dialout"  "plugdev"];
+    shell = pkgs.fish;
   };
 
   virtualisation.containers.enable = true;
@@ -98,6 +99,7 @@ in
   nixpkgs.config.allowUnfree = true;
 
   programs.firefox.enable = true;
+  programs.fish.enable = true;
     
   environment.variables.NIXOS_OZONE_WL = "1";
   environment.systemPackages = with pkgs; [

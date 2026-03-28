@@ -14,8 +14,19 @@ in
           config /home/archie/system/vpn/openvpn/TunnelBearIreland.ovpn
         '';
       };
-    };
+  };
 
+  systemd.services."openvpn-tunnelbear" = {
+    serviceConfig = {
+      Restart = "always";
+      RestartSec = "5";
+      Wants = "network-online.target";
+      After = [ "network-online.target" ];
+    };
+    wantedBy = [ "network-online.target" ];
+  };
+
+  services.fwupd.enable = true;
   
   imports =
     [ # Include the results of the hardware scan.
@@ -121,19 +132,11 @@ in
       xwayland-satellite
       xremap
       xournalpp
-      kicad
       hyprlock
       slack
-      segger-jlink
       vscode
-    ];
-    
-  nixpkgs.config.permittedInsecurePackages = [
-    "segger-jlink-qt4-810"
   ];
-
-  nixpkgs.config.segger-jlink.acceptLicense = true;
-
+    
   # Couldn't get sudo-less xremap to work
   systemd.services.xremap-system = {
     description = "System xremap service";

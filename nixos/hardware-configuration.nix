@@ -34,11 +34,6 @@
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
-  # Fingerprint Reader
-  services.fprintd.enable = true;
-  services.fprintd.tod.enable = true;
-  services.fprintd.tod.driver = pkgs.libfprint-2-tod1-goodix;
-
   powerManagement.enable = true;
   powerManagement.powertop.enable = true;
   services.thermald.enable = true;
@@ -54,30 +49,45 @@
     };
   };
 
-  services.logind.lidSwitch = "hibernate";
-  services.logind.lidSwitchExternalPower = "sleep";
-  services.logind.lidSwitchDocked = "ignore";
+  services.logind.settings.Login.HandleLidSwitch = "hibernate";
+  services.logind.settings.Login.HandleLidSwitchExternalPower = "sleep";
+  services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
+
+  services.upower.ignoreLid = true;
 
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
-  # Disable dGPU to save Battery
-  boot.extraModprobeConfig = ''
-    blacklist nouveau
-    options nouveau modeset=0
-  '';
+  hardware.graphics.enable = true;
+
+  services.xserver.videoDrivers = [
+      "modesetting"  
+      "nvidia"
+    ];
+
+  hardware.nvidia = {
+    modesetting.enable = true;
+    powerManagement.enable = false;
+    powerManagement.finegrained = false;
+    open = true;
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    prime = {
+        offload.enable = true;
+        offload.enableOffloadCmd = true;
+    		intelBusId = "PCI:0:2:0";
+    		nvidiaBusId = "PCI:1:0:0";
+    	};
+  };
+
+  hardware.libjaylink.enable = true;
+
+  boot.blacklistedKernelModules = [ "dvb_usb_rtl28xxu" "rtl2832_sdr" ];
   
   services.udev.extraRules = ''
-    # Remove NVIDIA USB xHCI Host Controller devices, if present
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{power/control}="auto", ATTR{remove}="1"
-    # Remove NVIDIA USB Type-C UCSI devices, if present
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c8000", ATTR{power/control}="auto", ATTR{remove}="1"
-    # Remove NVIDIA Audio devices, if present
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
-    # Remove NVIDIA VGA/3D controller devices
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", ATTR{power/control}="auto", ATTR{remove}="1"
     # For nRF PPK
     SUBSYSTEM=="usb", ATTR{idVendor}=="1915", ATTR{idProduct}=="c00a" MODE="0666", GROUP="dialout"
+    # For SDR
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE="0666", GROUP="plugdev"
   '';
-  boot.blacklistedKernelModules = [ "nouveau" "nvidia" "nvidia_drm" "nvidia_modeset" ];    
 }

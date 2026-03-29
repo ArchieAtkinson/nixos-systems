@@ -45,45 +45,14 @@
     { device = "/dev/disk/by-uuid/935e83f8-1ea8-4080-9dc5-1537aacbd1f8"; }
   ];
 
-  # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
-  # (the default) this is the recommended approach. When using systemd-networkd it's
-  # still possible to use this option, but it's recommended to use it in conjunction
-  # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
-  networking.useDHCP = lib.mkDefault true;
-
-  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-
-  powerManagement.enable = true;
-  powerManagement.powertop.enable = true;
-  services.thermald.enable = true;
-  services.auto-cpufreq.enable = true;
-  services.auto-cpufreq.settings = {
-    battery = {
-      governor = "powersave";
-      turbo = "auto";
-    };
-    charger = {
-      governor = "performance";
-      turbo = "auto";
-    };
-  };
-
-  services.logind.settings.Login.HandleLidSwitch = "hibernate";
-  services.logind.settings.Login.HandleLidSwitchExternalPower = "sleep";
-  services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
-
-  services.upower.ignoreLid = true;
-
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true;
-
-  hardware.graphics.enable = true;
 
   services.xserver.videoDrivers = [
     "modesetting"
     "nvidia"
   ];
+
+  hardware.graphics.enable = true;
 
   hardware.nvidia = {
     modesetting.enable = true;
@@ -100,17 +69,30 @@
     };
   };
 
+  networking.useDHCP = lib.mkDefault true;
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
+  powerManagement.enable = true;
+  powerManagement.powertop.enable = true;
+
+  services.thermald.enable = true;
+  services.auto-cpufreq.enable = true;
+  services.auto-cpufreq.settings = {
+    battery = {
+      governor = "powersave";
+      turbo = "auto";
+    };
+    charger = {
+      governor = "performance";
+      turbo = "auto";
+    };
+  };
+
+  modules.lid-management.enable = true;
+
+  hardware.bluetooth.enable = true;
+  hardware.bluetooth.powerOnBoot = true;
+
   hardware.libjaylink.enable = true;
-
-  boot.blacklistedKernelModules = [
-    "dvb_usb_rtl28xxu"
-    "rtl2832_sdr"
-  ];
-
-  services.udev.extraRules = ''
-    # For nRF PPK
-    SUBSYSTEM=="usb", ATTR{idVendor}=="1915", ATTR{idProduct}=="c00a" MODE="0666", GROUP="dialout"
-    # For SDR
-    SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE="0666", GROUP="plugdev"
-  '';
 }

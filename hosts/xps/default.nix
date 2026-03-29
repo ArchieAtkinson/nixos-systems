@@ -1,72 +1,34 @@
-{ config, pkgs, hostname, ... }:
+{
+  config,
+  pkgs,
+  hostname,
+  ...
+}:
 let
 
-  probersUdevRules = builtins.readFile ./../resources/69-probe-rs.rules;
 in
 {
-  nix.settings.experimental-features = "nix-command flakes";
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
-  services.udev.extraRules = probersUdevRules;
-
-  services.openvpn.servers = {
-      tunnelbear = {
-        config = ''
-          config /home/archie/system/vpn/openvpn/TunnelBearIreland.ovpn
-        '';
-      };
-  };
-
-  systemd.services."openvpn-tunnelbear" = {
-    serviceConfig = {
-      Restart = "always";
-      RestartSec = "5";
-      Wants = "network-online.target";
-      After = [ "network-online.target" ];
-    };
-    wantedBy = [ "network-online.target" ];
-  };
+  modules.udev-rules.nrf-ppk = true;
+  modules.udev-rules.probe-rs = true;
+  modules.rtl28xx.enable = true;
 
   services.fwupd.enable = true;
-  
-  imports =
-    [
-      ./hardware-configuration.nix
-    ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = hostname; # Define your hostname.
-    
-  # Enable networking
-  networking.networkmanager.enable = true;
-
-  # Set your time zone.
-  time.timeZone = "Europe/London";
-
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_GB.UTF-8";
-
-  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "en_GB.UTF-8";
-    LC_IDENTIFICATION = "en_GB.UTF-8";
-    LC_MEASUREMENT = "en_GB.UTF-8";
-    LC_MONETARY = "en_GB.UTF-8";
-    LC_NAME = "en_GB.UTF-8";
-    LC_NUMERIC = "en_GB.UTF-8";
-    LC_PAPER = "en_GB.UTF-8";
-    LC_TELEPHONE = "en_GB.UTF-8";
-    LC_TIME = "en_GB.UTF-8";
-  };
-
-  programs.command-not-found.enable = false;
 
   services.xserver.enable = true;
   services.displayManager.gdm.enable = true;
   services.displayManager.gdm.wayland = true;
   programs.niri.enable = true;
-  programs.waybar.enable = true;  
+  programs.waybar.enable = true;
 
   environment.variables.EDITOR = "hx";
 
@@ -92,20 +54,26 @@ in
     pulse.enable = true;
   };
 
-  users.groups.plugdev = {};
+  users.groups.plugdev = { };
   users.users.archie = {
     isNormalUser = true;
     description = "Archie";
-    extraGroups = [ "networkmanager" "wheel" "docker" "dialout"  "plugdev"];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "docker"
+      "dialout"
+      "plugdev"
+    ];
     shell = pkgs.fish;
   };
 
   virtualisation.containers.enable = true;
-    virtualisation = {
-      docker = {
-        enable = true;
-      };
+  virtualisation = {
+    docker = {
+      enable = true;
     };
+  };
 
   nixpkgs.config.allowUnfree = true;
 
@@ -117,26 +85,26 @@ in
     remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
     dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
   };
-  
+
   environment.variables.NIXOS_OZONE_WL = "1";
   environment.systemPackages = with pkgs; [
-      home-manager
-      ghostty
-      usbutils
-      wl-clipboard-rs # Required for Helix
-      bluetui # Bluetooth
-      kickoff # App Launcher
-      swayidle
-      glib # For gsettings
-      discord
-      xwayland-satellite
-      xremap
-      xournalpp
-      hyprlock
-      slack
-      vscode
+    home-manager
+    ghostty
+    usbutils
+    wl-clipboard-rs # Required for Helix
+    bluetui # Bluetooth
+    kickoff # App Launcher
+    swayidle
+    glib # For gsettings
+    discord
+    xwayland-satellite
+    xremap
+    xournalpp
+    hyprlock
+    slack
+    vscode
   ];
-    
+
   # Couldn't get sudo-less xremap to work
   systemd.services.xremap-system = {
     description = "System xremap service";
@@ -155,7 +123,7 @@ in
     nerd-fonts.jetbrains-mono
     jetbrains-mono
   ];
-  
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave

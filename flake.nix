@@ -3,10 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+
+    sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+
   };
 
   outputs =
-    { nixpkgs, ... }@inputs:
+    { nixpkgs, sops-nix, ... }@inputs:
     let
 
       common =
@@ -28,8 +32,13 @@
           inherit system;
           specialArgs = { inherit inputs hostname; };
           modules = [
+            sops-nix.nixosModules.sops
             common
             ./hosts/${hostname}
+            ./modules/common.nix
+            ./modules/lid-management.nix
+            ./modules/udev-rules.nix
+            ./modules/rtl28xx.nix
           ];
         };
 

@@ -5,37 +5,45 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = { self, nixpkgs, ...}@inputs:
-  let
-    system = "x86_64-linux";
-    
-    pkgs = import nixpkgs {
-      inherit system;
+  outputs =
+    { nixpkgs, ... }@inputs:
+    let
 
-      config = {
-        allowUnfree = true;
-      };
-    };
-    
-    localPkgsOverlay = pkgs.callPackage ./pkgs {
-      inherit (nixpkgs) lib;
-      inherit pkgs;
-    };
+      common =
+        { ... }:
+        {
+          config = {
+            nixpkgs.config.allowUnfree = true;
+            nixpkgs.overlays = [
+              (final: prev: {
+                localPkgs = final.callPackage ./pkgs { inherit (nixpkgs) lib; };
+              })
+            ];
+          };
+        };
 
-    in
-    {    
-     nixosConfigurations = {
-        nixos = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs; };
-
+      mkSystem =
+        { hostname, system }:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs hostname; };
           modules = [
-            { nixpkgs.overlays = [ localPkgsOverlay ]; }
-            ./nixos/configuration.nix
+            common
+            ./hosts/${hostname}
           ];
         };
+
+    in
+    {
+      nixosConfigurations = {
+        xps = mkSystem {
+          hostname = "xps";
+          system = "x86_64-linux";
+        };
+
       };
 
-     templates = {
+      templates = {
         rust = {
           path = ./templates/rust;
           description = "Rust development environment";

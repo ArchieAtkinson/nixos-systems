@@ -1,5 +1,5 @@
 update:
-    nixos-rebuild switch --flake . --sudo
+    nixos-rebuild switch --flake .#xps --sudo
 gc:
     nix-collect-garbage -d
     

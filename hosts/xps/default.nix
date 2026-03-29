@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, hostname, ... }:
 let
 
   probersUdevRules = builtins.readFile ./../resources/69-probe-rs.rules;
@@ -29,7 +29,7 @@ in
   services.fwupd.enable = true;
   
   imports =
-    [ # Include the results of the hardware scan.
+    [
       ./hardware-configuration.nix
     ];
 
@@ -37,7 +37,7 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = hostname; # Define your hostname.
     
   # Enable networking
   networking.networkmanager.enable = true;

@@ -36,6 +36,10 @@
           hostname = "xps";
           system = "x86_64-linux";
         };
+        framework = mkSystem {
+          hostname = "framework";
+          system = "x86_64-linux";
+        };
 
       };
 

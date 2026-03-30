@@ -1,5 +1,8 @@
+host := `hostname`
+
 update:
-    nixos-rebuild switch --flake .#xps --sudo
+    nixos-rebuild switch --flake .#{{host}} --sudo
+
 gc:
     nix-collect-garbage -d
     

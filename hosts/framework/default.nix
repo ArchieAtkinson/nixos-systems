@@ -23,6 +23,8 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
   programs.fish.enable = true;
 
   environment.variables.NIXOS_OZONE_WL = "1";

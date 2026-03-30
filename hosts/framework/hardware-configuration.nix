@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   modulesPath,
   ...
 }:
@@ -16,17 +17,17 @@
     "usb_storage"
     "sd_mod"
   ];
-  boot.initrd.kernelModules = [ ];
+  boot.initrd.kernelModules = [ "pinctrl_tigerlake" ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/4a5780d1-a627-44ca-9d3d-a72e56c512b8";
+    device = "/dev/disk/by-uuid/caeab1f0-cfa9-4a1c-8ef0-c22e02f5fb3c";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/BDD7-B1DE";
+    device = "/dev/disk/by-uuid/7B1A-795F";
     fsType = "vfat";
     options = [
       "fmask=0077"
@@ -35,11 +36,37 @@
   };
 
   swapDevices = [
-    { device = "/dev/disk/by-uuid/a5936fb0-ca6b-4688-a677-6c3ce4240a0e"; }
+    { device = "/dev/disk/by-uuid/ee432ce4-7a75-4093-bb4e-993c02b51409"; }
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+
+  hardware.sensor.iio.enable = true;
+
+  powerManagement.enable = true;
+  powerManagement.powertop.enable = true;
+
+  services.iio-niri = {
+    enable = true;
+    extraArgs = [
+      "--monitor"
+      "eDP-1"
+    ];
+  };
+
+  services.thermald.enable = true;
+  services.auto-cpufreq.enable = true;
+  services.auto-cpufreq.settings = {
+    battery = {
+      governor = "powersave";
+      turbo = "auto";
+    };
+    charger = {
+      governor = "performance";
+      turbo = "auto";
+    };
+  };
 
   modules.lid-management.enable = true;
 

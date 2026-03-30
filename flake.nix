@@ -13,19 +13,6 @@
     { nixpkgs, sops-nix, ... }@inputs:
     let
 
-      common =
-        { ... }:
-        {
-          config = {
-            nixpkgs.config.allowUnfree = true;
-            nixpkgs.overlays = [
-              (final: prev: {
-                localPkgs = final.callPackage ./pkgs { inherit (nixpkgs) lib; };
-              })
-            ];
-          };
-        };
-
       mkSystem =
         { hostname, system }:
         nixpkgs.lib.nixosSystem {
@@ -33,8 +20,8 @@
           specialArgs = { inherit inputs hostname; };
           modules = [
             sops-nix.nixosModules.sops
-            common
             ./hosts/${hostname}
+            ./modules/gui.nix
             ./modules/common.nix
             ./modules/lid-management.nix
             ./modules/udev-rules.nix

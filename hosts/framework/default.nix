@@ -17,7 +17,6 @@ in
   modules.udev-rules.nrf-ppk = true;
   modules.udev-rules.probe-rs = true;
   modules.rtl28xx.enable = true;
-  modules.gui.enable = true;
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -25,25 +24,13 @@ in
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  programs.fish.enable = true;
+  modules.gui.enable = true;
 
   environment.variables.NIXOS_OZONE_WL = "1";
+
   environment.systemPackages = with pkgs; [
     home-manager
-    ghostty
-    usbutils
-    wl-clipboard-rs # Required for Helix
-    bluetui # Bluetooth
-    kickoff # App Launcher
-    swayidle
     glib # For gsettings
-    discord
-    xwayland-satellite
-    xremap
-    xournalpp
-    hyprlock
-    slack
-    vscode
   ];
 
   # This value determines the NixOS release from which the default

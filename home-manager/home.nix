@@ -6,13 +6,9 @@ in
   home.username = "archie";
   home.homeDirectory = "/home/archie";
 
-  # You should not change this value, even if you update Home Manager. If you do
-  # want to update the value, then make sure to first check the Home Manager
-  # release notes.
-  home.stateVersion = "25.05"; # Please read the comment before changing.
-
   programs.yazi = {
     enable = true;
+    shellWrapperName = "y";
     settings = {
       mgr = {
         show_hidden = true;
@@ -40,15 +36,29 @@ in
     nix-direnv.enable = true;
   };
 
+  programs.firefox.enable = true;
+
   nixpkgs.config.segger-jlink.acceptLicense = true;
   nixpkgs.config.allowUnfree = true;
   home.packages = with pkgs; [
+    usbutils
+    wl-clipboard-rs # Required for Helix
+    bluetui # Bluetooth
+    kickoff # App Launcher
+    swayidle
+    discord
+    xwayland-satellite
+    xremap
+    xournalpp
+    hyprlock
+    slack
+    vscode
+    ghostty
     kicad-unstable
     fastfetch
     fish
     fishPlugins.pure
     fishPlugins.sponge
-    stow
     local.berth
     helix
     lazygit
@@ -87,12 +97,18 @@ in
     "segger-jlink-qt4-874"
   ];
 
-  programs.nh = {
-    enable = true;
-    clean.enable = true;
-    clean.extraArgs = "--keep-since 4d --keep 3";
-    flake = "/home/archie/system";
-  };
+  # programs.nh = {
+  #   enable = true;
+  #   clean.enable = true;
+  #   clean.extraArgs = "--keep-since 4d --keep 3";
+  #   flake = "/home/archie/nixos-systems";
+  # };
 
   programs.home-manager.enable = true;
+
+  # You should not change this value, even if you update Home Manager. If you do
+  # want to update the value, then make sure to first check the Home Manager
+  # release notes.
+  home.stateVersion = "25.05"; # Please read the comment before changing.
+
 }

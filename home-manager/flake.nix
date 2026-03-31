@@ -11,7 +11,12 @@
   };
 
   outputs =
-    { nixpkgs, home-manager, nix-yazi-flavors, ... }:
+    {
+      nixpkgs,
+      home-manager,
+      nix-yazi-flavors,
+      ...
+    }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {

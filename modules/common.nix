@@ -62,6 +62,7 @@ in
     variant = "";
   };
 
+  programs.fish.enable = true; # Required for system shell
   users.groups.plugdev = { };
   users.users.archie = {
     isNormalUser = true;
@@ -86,6 +87,12 @@ in
     nerd-fonts.jetbrains-mono
     jetbrains-mono
   ];
+
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+  };
 
   security.polkit.enable = true;
 

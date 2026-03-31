@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: (.*?)
+    age: 'age145alqayw6lv5qvxj5sftwrv4ptdwj4dlrzt0gy2ffpxen4hc0fdqxtpu2s'

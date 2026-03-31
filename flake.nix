@@ -3,39 +3,47 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+
+    sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+
   };
 
-  outputs = { self, nixpkgs, ...}@inputs:
-  let
-    system = "x86_64-linux";
-    
-    pkgs = import nixpkgs {
-      inherit system;
+  outputs =
+    { nixpkgs, sops-nix, ... }@inputs:
+    let
 
-      config = {
-        allowUnfree = true;
-      };
-    };
-    
-    localPkgsOverlay = pkgs.callPackage ./pkgs {
-      inherit (nixpkgs) lib;
-      inherit pkgs;
-    };
-
-    in
-    {    
-     nixosConfigurations = {
-        nixos = nixpkgs.lib.nixosSystem {
-          specialArgs = { inherit inputs; };
-
+      mkSystem =
+        { hostname, system }:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs hostname; };
           modules = [
-            { nixpkgs.overlays = [ localPkgsOverlay ]; }
-            ./nixos/configuration.nix
+            sops-nix.nixosModules.sops
+            ./hosts/${hostname}
+            ./modules/gui.nix
+            ./modules/common.nix
+            ./modules/lid-management.nix
+            ./modules/udev-rules.nix
+            ./modules/rtl28xx.nix
           ];
         };
+
+    in
+    {
+      nixosConfigurations = {
+        xps = mkSystem {
+          hostname = "xps";
+          system = "x86_64-linux";
+        };
+        framework = mkSystem {
+          hostname = "framework";
+          system = "x86_64-linux";
+        };
+
       };
 
-     templates = {
+      templates = {
         rust = {
           path = ./templates/rust;
           description = "Rust development environment";

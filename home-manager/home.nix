@@ -48,7 +48,6 @@ in
     swayidle
     discord
     xwayland-satellite
-    xremap
     xournalpp
     hyprlock
     slack

@@ -23,6 +23,7 @@
             ./hosts/${hostname}
             ./modules/gui.nix
             ./modules/common.nix
+            ./modules/xremap.nix
             ./modules/lid-management.nix
             ./modules/udev-rules.nix
             ./modules/rtl28xx.nix

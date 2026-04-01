@@ -8,6 +8,8 @@ let
 in
 {
 
+  modules.xremap.enable = true;
+
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
   nixpkgs.overlays = [
@@ -15,17 +17,6 @@ in
       localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
     })
   ];
-
-  # Couldn't get sudo-less xremap to work
-  systemd.services.xremap-system = {
-    description = "System xremap service";
-    enable = true;
-    wantedBy = [ "multi-user.target" ];
-
-    serviceConfig = {
-      ExecStart = "${pkgs.xremap}/bin/xremap ${config.users.users.archie.home}/.config/xremap/config.yml";
-    };
-  };
 
   sops.defaultSopsFile = ./resources/secrets.yaml;
   sops.age.keyFile = "/home/archie/.config/sops/age/keys.txt";

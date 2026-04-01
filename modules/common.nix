@@ -10,9 +10,11 @@ in
 
   modules.xremap.enable = true;
   modules.sops.enable = true;
+  modules.user.archie = true;
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
+
   nixpkgs.overlays = [
     (final: prev: {
       localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
@@ -47,22 +49,6 @@ in
   services.xserver.xkb = {
     layout = "gb";
     variant = "";
-  };
-
-  programs.fish.enable = true; # Required for system shell
-  users.groups.plugdev = { };
-  users.users.archie = {
-    isNormalUser = true;
-    hashedPassword = "$y$j9T$SN1/W4HroOxr3kt8ADvg50$N.J8jOpSbzFqO6.9u/Kp1Z166u87emCJi89WeaY6c8D";
-    description = "Archie";
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-      "docker"
-      "dialout"
-      "plugdev"
-    ];
-    shell = pkgs.fish;
   };
 
   services.xserver.enable = true;

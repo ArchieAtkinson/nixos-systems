@@ -21,6 +21,7 @@
           modules = [
             sops-nix.nixosModules.sops
             ./hosts/${hostname}
+            ./modules/user.nix
             ./modules/gui.nix
             ./modules/common.nix
             ./modules/xremap.nix

@@ -9,6 +9,7 @@ in
 {
 
   modules.xremap.enable = true;
+  modules.sops.enable = true;
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
@@ -17,11 +18,6 @@ in
       localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
     })
   ];
-
-  sops.defaultSopsFile = ./resources/secrets.yaml;
-  sops.age.keyFile = "/home/archie/.config/sops/age/keys.txt";
-  sops.secrets.vpn_auth = { };
-  sops.secrets.vpn_ca = { };
 
   virtualisation.containers.enable = true;
   virtualisation = {

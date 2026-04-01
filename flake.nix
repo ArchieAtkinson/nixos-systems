@@ -24,6 +24,7 @@
             ./modules/gui.nix
             ./modules/common.nix
             ./modules/xremap.nix
+            ./modules/sops.nix
             ./modules/lid-management.nix
             ./modules/udev-rules.nix
             ./modules/rtl28xx.nix

@@ -91,6 +91,7 @@ in
     segger-jlink
     mixxx
     chezmoi
+    age
   ];
 
   nixpkgs.config.permittedInsecurePackages = [

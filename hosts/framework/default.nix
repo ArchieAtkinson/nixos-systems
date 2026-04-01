@@ -8,15 +8,18 @@ let
 
 in
 {
+  modules.gui.enable = true;
+
   networking.hostName = hostname; # Define your hostname.
+
+  environment.systemPackages = with pkgs; [
+    home-manager
+    glib # For gsettings
+  ];
 
   imports = [
     ./hardware-configuration.nix
   ];
-
-  modules.udev-rules.nrf-ppk = true;
-  modules.udev-rules.probe-rs = true;
-  modules.rtl28xx.enable = true;
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -24,14 +27,7 @@ in
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  modules.gui.enable = true;
-
   environment.variables.NIXOS_OZONE_WL = "1";
-
-  environment.systemPackages = with pkgs; [
-    home-manager
-    glib # For gsettings
-  ];
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

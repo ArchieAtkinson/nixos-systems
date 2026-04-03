@@ -13,6 +13,7 @@ in
   modules.user.archie = true;
   modules.audio.enable = true;
   modules.virtualisation.enable = true;
+  modules.vpn.enable = true;
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
@@ -63,39 +64,5 @@ in
     LC_PAPER = "en_GB.UTF-8";
     LC_TELEPHONE = "en_GB.UTF-8";
     LC_TIME = "en_GB.UTF-8";
-  };
-
-  services.openvpn.servers = {
-    tunnelbear = {
-      config = ''
-        client
-        remote ie.lazerpenguin.com 443
-        dev tun0
-        proto udp
-        nobind
-        remote-cert-tls server
-        persist-key
-        persist-tun
-        reneg-sec 0
-        dhcp-option DNS 8.8.8.8
-        dhcp-option DNS 8.8.4.4
-        redirect-gateway
-        verb 5
-        auth-user-pass ${config.sops.secrets.vpn_auth.path}
-        ca ${config.sops.secrets.vpn_ca.path}
-        data-ciphers AES-256-CBC
-        auth SHA256
-      '';
-    };
-  };
-
-  systemd.services."openvpn-tunnelbear" = {
-    serviceConfig = {
-      Restart = "always";
-      RestartSec = "5";
-      Wants = "network-online.target";
-      After = [ "network-online.target" ];
-    };
-    wantedBy = [ "network-online.target" ];
   };
 }

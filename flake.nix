@@ -23,6 +23,7 @@
             ./hosts/${hostname}
             ./modules/user.nix
             ./modules/virtualisation.nix
+            ./modules/vpn.nix
             ./modules/audio.nix
             ./modules/gui.nix
             ./modules/common.nix

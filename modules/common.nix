@@ -12,6 +12,7 @@ in
   modules.sops.enable = true;
   modules.user.archie = true;
   modules.audio.enable = true;
+  modules.virtualisation.enable = true;
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
@@ -26,6 +27,8 @@ in
       localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
     })
   ];
+
+  environment.variables.EDITOR = "hx";
 
   console.keyMap = "uk";
   services.xserver = {

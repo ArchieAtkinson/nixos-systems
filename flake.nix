@@ -22,6 +22,7 @@
             sops-nix.nixosModules.sops
             ./hosts/${hostname}
             ./modules/user.nix
+            ./modules/virtualisation.nix
             ./modules/audio.nix
             ./modules/gui.nix
             ./modules/common.nix

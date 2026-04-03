@@ -14,6 +14,11 @@ in
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
+  programs.command-not-found.enable = false;
+  security.polkit.enable = true;
+  networking.networkmanager.enable = true;
+  services.fwupd.enable = true;
+  services.printing.enable = true;
 
   nixpkgs.overlays = [
     (final: prev: {
@@ -21,17 +26,14 @@ in
     })
   ];
 
+  environment.variables.EDITOR = "hx";
+
   virtualisation.containers.enable = true;
   virtualisation = {
     docker = {
       enable = true;
     };
   };
-
-  environment.variables.EDITOR = "hx";
-
-  services.fwupd.enable = true;
-  services.printing.enable = true;
 
   # Enable Sound
   services.pulseaudio.enable = false;
@@ -43,17 +45,14 @@ in
     pulse.enable = true;
   };
 
-  programs.command-not-found.enable = false;
-
-  # Configure keymap in X11
-  services.xserver.xkb = {
-    layout = "gb";
-    variant = "";
-  };
-
-  services.xserver.enable = true;
-
   console.keyMap = "uk";
+  services.xserver = {
+    enable = true;
+    xkb = {
+      layout = "gb";
+      variant = "";
+    };
+  };
 
   fonts.packages = with pkgs; [
     font-awesome
@@ -66,8 +65,6 @@ in
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
   };
-
-  security.polkit.enable = true;
 
   time.timeZone = "Europe/London";
   i18n.defaultLocale = "en_GB.UTF-8";
@@ -82,8 +79,6 @@ in
     LC_TELEPHONE = "en_GB.UTF-8";
     LC_TIME = "en_GB.UTF-8";
   };
-
-  networking.networkmanager.enable = true;
 
   services.openvpn.servers = {
     tunnelbear = {

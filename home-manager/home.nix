@@ -47,7 +47,6 @@ in
     kickoff # App Launcher
     swayidle
     discord
-    xwayland-satellite
     xournalpp
     hyprlock
     slack

@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
@@ -21,6 +22,10 @@ in
 
     programs.niri.enable = true;
     programs.waybar.enable = true;
+    
+    environment.systemPackages = with pkgs; [
+      xwayland-satellite
+    ];
   };
 
 }

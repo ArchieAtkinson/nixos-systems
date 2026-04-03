@@ -11,6 +11,7 @@ in
   modules.xremap.enable = true;
   modules.sops.enable = true;
   modules.user.archie = true;
+  modules.audio.enable = true;
 
   nix.settings.experimental-features = "nix-command flakes";
   nixpkgs.config.allowUnfree = true;
@@ -25,25 +26,6 @@ in
       localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
     })
   ];
-
-  environment.variables.EDITOR = "hx";
-
-  virtualisation.containers.enable = true;
-  virtualisation = {
-    docker = {
-      enable = true;
-    };
-  };
-
-  # Enable Sound
-  services.pulseaudio.enable = false;
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-  };
 
   console.keyMap = "uk";
   services.xserver = {

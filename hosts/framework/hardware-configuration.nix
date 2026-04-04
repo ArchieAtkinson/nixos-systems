@@ -42,11 +42,11 @@
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
-  hardware.sensor.iio.enable = true;
-
   powerManagement.enable = true;
   powerManagement.powertop.enable = true;
 
+  # Enables screen rotation
+  hardware.sensor.iio.enable = true;
   services.iio-niri = {
     enable = true;
     extraArgs = [
@@ -59,7 +59,7 @@
   services.auto-cpufreq.enable = true;
   services.auto-cpufreq.settings = {
     battery = {
-      governor = "powersave";
+      governor = "performance";
       turbo = "auto";
     };
     charger = {
@@ -72,4 +72,33 @@
 
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
+
+  # Not currently working
+  hardware.fw-fanctrl = {
+    enable = true;
+    config = {
+      defaultStrategy = "custom";
+      strategies = {
+        "custom" = {
+          fanSpeedUpdateFrequency = 5;
+          movingAverageInterval = 60;
+          speedCurve = [
+            {
+              temp = 0;
+              speed = 0;
+            }
+            {
+              temp = 75;
+              speed = 50;
+            }
+            {
+              temp = 90;
+              speed = 100;
+            }
+          ];
+        };
+      };
+    };
+  };
+
 }

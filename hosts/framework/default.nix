@@ -10,10 +10,11 @@ in
 {
   modules.gui.enable = true;
 
-  networking.hostName = hostname; # Define your hostname.
+  networking.hostName = hostname;
 
   environment.systemPackages = with pkgs; [
     home-manager
+    framework-tool
     glib # For gsettings
   ];
 

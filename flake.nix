@@ -21,6 +21,7 @@
           modules = [
             sops-nix.nixosModules.sops
             ./hosts/${hostname}
+            ./modules/locale.nix
             ./modules/user.nix
             ./modules/virtualisation.nix
             ./modules/vpn.nix

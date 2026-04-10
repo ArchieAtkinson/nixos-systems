@@ -39,14 +39,9 @@ in
       };
     };
 
-    systemd.services."openvpn-tunnelbear" = {
-      serviceConfig = {
-        Restart = "always";
-        RestartSec = "5";
-        Wants = "network-online.target";
-        After = [ "network-online.target" ];
-      };
-      wantedBy = [ "network-online.target" ];
-    };
+    environment.systemPackages = with pkgs; [
+      wireguard-tools
+      protonvpn-gui
+    ];
   };
 }

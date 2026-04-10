@@ -1,11 +1,12 @@
 host := `hostname`
 
+[no-cd]
 os-switch:
-    nixos-rebuild switch --flake .#{{host}} --sudo
+    nh os switch . -H {{host}} 
 
-gc:
-    nix-collect-garbage -d
-    
 [working-directory: 'home-manager']
 hm-switch:
-    home-manager --flake . switch
+    nh home switch .
+
+clean:
+    nh clean all

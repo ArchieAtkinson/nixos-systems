@@ -8,7 +8,20 @@ let
 
 in
 {
+  modules.common.enable = true;
   modules.gui.enable = true;
+  modules.xremap.enable = true;
+  modules.sops.enable = true;
+  modules.user.archie = true;
+  modules.audio.enable = true;
+  modules.virtualisation.enable = true;
+  modules.vpn.enable = true;
+  modules.locale.GB = true;
+
+  services.jellyfin = {
+    enable = true;
+    openFirewall = true;
+  };
 
   networking.hostName = hostname;
 

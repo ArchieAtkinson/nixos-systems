@@ -1,56 +1,57 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
 
 let
+  cfg = config.modules.common;
 in
 {
 
-  modules.xremap.enable = true;
-  modules.sops.enable = true;
-  modules.user.archie = true;
-  modules.audio.enable = true;
-  modules.virtualisation.enable = true;
-  modules.vpn.enable = true;
-  modules.locale.GB = true;
+  options.modules.common = {
+    enable = lib.mkEnableOption "Enable Common Settings";
+  };
 
-  nix.settings.experimental-features = "nix-command flakes";
-  nixpkgs.config.allowUnfree = true;
-  programs.command-not-found.enable = false;
-  security.polkit.enable = true;
-  networking.networkmanager.enable = true;
-  services.fwupd.enable = true;
-  services.printing.enable = true;
+  config = lib.mkIf cfg.enable {
 
-  nixpkgs.overlays = [
-    (final: prev: {
-      localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
-    })
-  ];
+    nix.settings.experimental-features = "nix-command flakes";
+    nixpkgs.config.allowUnfree = true;
+    programs.command-not-found.enable = false;
+    security.polkit.enable = true;
+    networking.networkmanager.enable = true;
+    services.fwupd.enable = true;
+    services.printing.enable = true;
 
-  environment.variables.EDITOR = "hx";
+    nixpkgs.overlays = [
+      (final: prev: {
+        localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };
+      })
+    ];
 
-  console.keyMap = "uk";
-  services.xserver = {
-    enable = true;
-    xkb = {
-      layout = "gb";
-      variant = "";
+    environment.variables.EDITOR = "hx";
+
+    console.keyMap = "uk";
+    services.xserver = {
+      enable = true;
+      xkb = {
+        layout = "gb";
+        variant = "";
+      };
     };
+
+    fonts.packages = with pkgs; [
+      font-awesome
+      nerd-fonts.jetbrains-mono
+      jetbrains-mono
+    ];
+
+    programs.nh = {
+      enable = true;
+      clean.enable = true;
+      clean.extraArgs = "--keep-since 4d --keep 3";
+    };
+
   };
-
-  fonts.packages = with pkgs; [
-    font-awesome
-    nerd-fonts.jetbrains-mono
-    jetbrains-mono
-  ];
-
-  programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true;
-    dedicatedServer.openFirewall = true;
-  };
-
 }

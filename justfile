@@ -1,10 +1,10 @@
 host := `hostname`
 
-[no-cd]
+[working-directory: 'os']
 os-switch:
     nh os switch . -H {{host}} 
 
-[working-directory: 'home-manager']
+[working-directory: 'home']
 hm-switch:
     nh home switch .
 

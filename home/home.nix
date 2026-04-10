@@ -96,13 +96,6 @@ in
     "segger-jlink-qt4-874"
   ];
 
-  # programs.nh = {
-  #   enable = true;
-  #   clean.enable = true;
-  #   clean.extraArgs = "--keep-since 4d --keep 3";
-  #   flake = "/home/archie/nixos-systems";
-  # };
-
   programs.home-manager.enable = true;
 
   # You should not change this value, even if you update Home Manager. If you do

@@ -1,4 +1,6 @@
 modmap:
-  - name: CapsLock to Esc
+  - name: General
     remap:
       CapsLock: Esc
+      Alt_R: Backspace
+      Backspace: []

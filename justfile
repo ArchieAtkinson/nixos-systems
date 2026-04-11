@@ -1,12 +1,12 @@
 host := `hostname`
 
 [working-directory: 'os']
-os-switch:
-    nh os switch . -H {{host}} 
+os-switch *ARGS:
+    nh os switch . -H {{host}} {{ARGS}} 
 
 [working-directory: 'home']
-hm-switch:
-    nh home switch .
+hm-switch *ARGS:
+    nh home switch . {{ARGS}}
 
 clean:
     nh clean all

@@ -1,40 +1,11 @@
 { pkgs, lib, ... }:
 let
-  local = pkgs.callPackage ./pkgs { inherit (pkgs) lib; };
 in
 {
   home.username = "archie";
   home.homeDirectory = "/home/archie";
 
-  programs.yazi = {
-    enable = true;
-    shellWrapperName = "y";
-    settings = {
-      mgr = {
-        show_hidden = true;
-        sort_by = "mtime";
-        sort_reverse = true;
-      };
-    };
-    flavors = {
-      inherit (pkgs.yazi-flavors)
-        catppuccin-macchiato
-        catppuccin-latte
-        ;
-    };
-    theme.flavor = {
-      dark = "catppuccin-macchiato";
-      light = "catppuccin-latte";
-    };
-  };
-
-  home.shell.enableFishIntegration = true;
-
-  programs.direnv = {
-    enable = true;
-    silent = true;
-    nix-direnv.enable = true;
-  };
+  modules.core-cli.enable = true;
 
   programs.firefox.enable = true;
 
@@ -54,16 +25,6 @@ in
     ghostty
     kicad-unstable
     fastfetch
-    fish
-    fishPlugins.pure
-    fishPlugins.sponge
-    local.berth
-    helix
-    lazygit
-    just
-    git
-    zellij
-    typos-lsp
     nixfmt
     nixd
     ripgrep

@@ -29,6 +29,8 @@
         inherit pkgs;
         modules = [
           ./home.nix
+          ./modules/yazi.nix
+          ./modules/core-cli.nix
         ];
       };
     };

@@ -23,12 +23,16 @@ in
       fishPlugins.pure
       fishPlugins.sponge
       helix
+      wl-clipboard-rs # Required for Helix
       lazygit
       zellij
       typos-lsp
       local.berth
       just
       git
+      nixfmt
+      nixd
+      wget
     ];
 
     home.shell.enableFishIntegration = true;

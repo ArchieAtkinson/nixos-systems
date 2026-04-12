@@ -5,32 +5,22 @@ in
   home.username = "archie";
   home.homeDirectory = "/home/archie";
 
-  modules.core-cli.enable = true;
-
-  programs.firefox.enable = true;
-
-  nixpkgs.config.segger-jlink.acceptLicense = true;
   nixpkgs.config.allowUnfree = true;
+
+  modules.core-cli.enable = true;
+  modules.core-gui.enable = true;
+
   home.packages = with pkgs; [
     usbutils
-    wl-clipboard-rs # Required for Helix
     bluetui # Bluetooth
-    kickoff # App Launcher
-    swayidle
     discord
     xournalpp
-    hyprlock
     slack
     vscode
-    ghostty
-    kicad-unstable
     fastfetch
-    nixfmt
-    nixd
     ripgrep
     fd
     bat
-    wget
     asciinema_3
     fzf
     zoxide
@@ -38,23 +28,12 @@ in
     mako
     unzip
     lxsession
-    minicom
     lazydocker
     devcontainer
-    nrfconnect
-    nrf-udev
-    # steam-tui
-    # steamcmd
-    sdrpp
     popsicle
-    segger-jlink
     mixxx
     chezmoi
     age
-  ];
-
-  nixpkgs.config.permittedInsecurePackages = [
-    "segger-jlink-qt4-874"
   ];
 
   programs.home-manager.enable = true;

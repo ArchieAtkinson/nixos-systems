@@ -6,7 +6,7 @@ os-switch *ARGS:
 
 [working-directory: 'home']
 hm-switch *ARGS:
-    nh home switch . {{ARGS}}
+    nh home switch . -c {{host}} {{ARGS}}
 
 clean:
     nh clean all

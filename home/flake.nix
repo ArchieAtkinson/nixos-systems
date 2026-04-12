@@ -25,12 +25,14 @@
       };
     in
     {
-      homeConfigurations."archie" = home-manager.lib.homeManagerConfiguration {
+      homeConfigurations.framework = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
           ./home.nix
           ./modules/yazi.nix
           ./modules/core-cli.nix
+          ./modules/core-gui.nix
+          ./modules/fw-dev.nix
         ];
       };
     };

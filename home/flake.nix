@@ -18,23 +18,30 @@
       ...
     }:
     let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ nix-yazi-flavors.overlay ];
-      };
+      mkConfig =
+        { config, system }:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ nix-yazi-flavors.overlay ];
+          };
+          modules = [
+            ./configs/${config}.nix
+            ./modules/yazi.nix
+            ./modules/core-cli.nix
+            ./modules/core-gui.nix
+            ./modules/fw-dev.nix
+            ./modules/nix-tools.nix
+          ];
+        };
     in
     {
-      homeConfigurations.framework = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        modules = [
-          ./home.nix
-          ./modules/yazi.nix
-          ./modules/core-cli.nix
-          ./modules/core-gui.nix
-          ./modules/fw-dev.nix
-          ./modules/nix-tools.nix
-        ];
+      homeConfigurations = {
+        framework = mkConfig {
+          config = "framework";
+          system = "x86_64-linux";
+        };
       };
     };
+
 }

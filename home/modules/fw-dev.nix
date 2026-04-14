@@ -22,6 +22,7 @@ in
       sdrpp
       segger-jlink
       minicom
+      popsicle
     ];
 
     nixpkgs.config.permittedInsecurePackages = [

@@ -33,6 +33,7 @@
           ./modules/core-cli.nix
           ./modules/core-gui.nix
           ./modules/fw-dev.nix
+          ./modules/nix-tools.nix
         ];
       };
     };

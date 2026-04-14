@@ -30,8 +30,6 @@ in
       local.berth
       just
       git
-      nixfmt
-      nixd
       wget
     ];
 

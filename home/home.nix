@@ -9,13 +9,12 @@ in
 
   modules.core-cli.enable = true;
   modules.core-gui.enable = true;
+  modules.nix-tools.enable = true;
 
   home.packages = with pkgs; [
     usbutils
     bluetui # Bluetooth
-    discord
     xournalpp
-    slack
     vscode
     fastfetch
     ripgrep
@@ -30,8 +29,6 @@ in
     lxsession
     lazydocker
     devcontainer
-    popsicle
-    mixxx
     chezmoi
     age
   ];

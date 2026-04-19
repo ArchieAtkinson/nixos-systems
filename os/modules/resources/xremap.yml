@@ -1,6 +1,8 @@
 modmap:
-  - name: General
+  - name: Laptop
     remap:
       CapsLock: Esc
       Alt_R: Backspace
       Backspace: []
+    device:
+      only: "/dev/input/event0"

@@ -41,6 +41,11 @@
           config = "framework";
           system = "x86_64-linux";
         };
+
+        xps = mkConfig {
+          config = "xps";
+          system = "x86_64-linux";
+        };
       };
     };
 

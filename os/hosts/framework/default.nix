@@ -15,7 +15,7 @@ in
   modules.user.archie = true;
   modules.audio.enable = true;
   modules.virtualisation.enable = true;
-  modules.vpn.enable = true;
+  modules.vpn.proton-vpn = true;
   modules.locale.GB = true;
 
   services.jellyfin = {
@@ -28,7 +28,6 @@ in
   environment.systemPackages = with pkgs; [
     home-manager
     framework-tool
-    glib # For gsettings
   ];
 
   imports = [

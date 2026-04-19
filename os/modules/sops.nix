@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  hostname,
   ...
 }:
 
@@ -19,5 +20,7 @@ in
     sops.age.keyFile = "/home/archie/.config/sops/age/keys.txt";
     sops.secrets.vpn_auth = { };
     sops.secrets.vpn_ca = { };
+    sops.secrets."syncthing_key_${hostname}" = { };
+    sops.secrets."syncthing_cert_${hostname}" = { };
   };
 }

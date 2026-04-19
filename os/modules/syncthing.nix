@@ -29,12 +29,16 @@ in
           "xps" = {
             id = "VTFCUO2-DK47Z33-26NK3LQ-OTESVKJ-JBJCYJ6-7XR3QXU-CUSGOPT-764SPQC";
           };
+          "framework" = {
+            id = "QDL6O2M-5VDQY75-IPSIHW4-27LW5UZ-FYUE73F-MHBQTGV-43N5C55-EFO25AN";
+          };
         };
         folders = {
           "Notes" = {
             path = "/home/archie/notes";
             devices = [
               "xps"
+              "framework"
             ];
           };
         };

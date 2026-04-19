@@ -17,6 +17,7 @@ in
   modules.virtualisation.enable = true;
   modules.vpn.proton-vpn = true;
   modules.locale.GB = true;
+  modules.syncthing.enable = true;
 
   services.jellyfin = {
     enable = true;

@@ -24,6 +24,8 @@ in
     services.fwupd.enable = true;
     services.printing.enable = true;
 
+    services.openssh.enable = true;
+
     nixpkgs.overlays = [
       (final: prev: {
         localPkgs = final.callPackage ./pkgs { inherit (pkgs) lib; };

@@ -48,6 +48,10 @@
           hostname = "framework";
           system = "x86_64-linux";
         };
+        tincan = mkSystem {
+          hostname = "tincan";
+          system = "x86_64-linux";
+        };
 
       };
 

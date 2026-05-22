@@ -25,16 +25,6 @@ in
           sort_reverse = true;
         };
       };
-      flavors = {
-        inherit (pkgs.yazi-flavors)
-          catppuccin-macchiato
-          catppuccin-latte
-          ;
-      };
-      theme.flavor = {
-        dark = "catppuccin-macchiato";
-        light = "catppuccin-latte";
-      };
     };
   };
 }

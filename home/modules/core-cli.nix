@@ -31,6 +31,7 @@ in
       just
       git
       wget
+      devenv
     ];
 
     home.shell.enableFishIntegration = true;

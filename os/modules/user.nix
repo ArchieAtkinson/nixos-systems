@@ -18,6 +18,7 @@ in
     programs.fish.enable = true; # Required for system shell
 
     users.groups.plugdev = { };
+    xdg.enable = true;
 
     users.users.archie = {
       isNormalUser = true;

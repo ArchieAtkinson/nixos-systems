@@ -12,6 +12,7 @@ in
   modules.nix-tools.enable = true;
 
   home.packages = with pkgs; [
+    kicad
     usbutils
     bluetui # Bluetooth
     xournalpp

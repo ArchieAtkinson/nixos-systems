@@ -8,6 +8,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-yazi-flavors.url = "github:aguirre-matteo/nix-yazi-flavors";
+
+    zen-browser = {
+      url = "github:0xc000022070/zen-browser-flake";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        home-manager.follows = "home-manager";
+      };
+    };
   };
 
   outputs =
@@ -15,6 +23,7 @@
       nixpkgs,
       home-manager,
       nix-yazi-flavors,
+      zen-browser,
       ...
     }:
     let
@@ -25,7 +34,9 @@
             inherit system;
             overlays = [ nix-yazi-flavors.overlay ];
           };
+
           modules = [
+            zen-browser.homeModules.beta
             ./configs/${config}.nix
             ./modules/yazi.nix
             ./modules/core-cli.nix

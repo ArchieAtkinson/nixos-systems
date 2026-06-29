@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
@@ -18,7 +19,7 @@ in
 
   config = mkMerge [
     (mkIf cfg.probe-rs {
-      services.udev.extraRules = builtins.readFile ./resources/probe-rs.rules;
+      services.udev.packages = [ pkgs.probe-rs-tools ];
     })
 
     (mkIf cfg.nrf-ppk {

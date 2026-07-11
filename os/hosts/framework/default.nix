@@ -26,10 +26,34 @@ in
 
   networking.hostName = hostname;
 
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    publish = {
+      enable = true;
+      addresses = true;
+      workstation = true;
+    };
+  };
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gnome
+      xdg-desktop-portal-gtk
+    ];
+    configPackages = [ pkgs.gnome-session ];
+  };
+
   environment.systemPackages = with pkgs; [
     home-manager
+    gnome-network-displays
+    glib-networking # TLS backend for GIO
+    gsettings-desktop-schemas
     framework-tool
   ];
+
+  programs.dconf.enable = true;
 
   imports = [
     ./hardware-configuration.nix

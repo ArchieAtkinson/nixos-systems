@@ -32,6 +32,7 @@ in
       git
       wget
       devenv
+      marksman
     ];
 
     home.shell.enableFishIntegration = true;

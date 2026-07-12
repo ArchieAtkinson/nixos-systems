@@ -25,10 +25,5 @@ in
       wireplumber.enable = true;
     };
 
-    nixpkgs.config.pulseaudio = true;
-
-    environment.systemPackages = [
-      pkgs.pulseaudio
-    ];
   };
 }

@@ -16,6 +16,8 @@
         home-manager.follows = "home-manager";
       };
     };
+
+    handy.url = "github:cjpais/Handy";
   };
 
   outputs =
@@ -24,8 +26,9 @@
       home-manager,
       nix-yazi-flavors,
       zen-browser,
+      handy,
       ...
-    }:
+    }@inputs:
     let
       mkConfig =
         { config, system }:
@@ -35,6 +38,7 @@
             overlays = [ nix-yazi-flavors.overlay ];
           };
 
+          extraSpecialArgs = { inherit inputs; };
           modules = [
             zen-browser.homeModules.beta
             ./configs/${config}.nix

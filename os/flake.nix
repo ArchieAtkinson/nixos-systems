@@ -6,11 +6,14 @@
 
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
-
   };
 
   outputs =
-    { nixpkgs, sops-nix, ... }@inputs:
+    {
+      nixpkgs,
+      sops-nix,
+      ...
+    }@inputs:
     let
 
       mkSystem =

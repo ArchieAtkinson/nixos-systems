@@ -16,8 +16,8 @@ in
   };
 
   config = mkIf cfg.enable {
-    services.logind.settings.Login.HandleLidSwitch = "sleep";
-    services.logind.settings.Login.HandleLidSwitchExternalPower = "sleep";
+    services.logind.settings.Login.HandleLidSwitch = "hibernate";
+    services.logind.settings.Login.HandleLidSwitchExternalPower = "suspend-then-hibernate";
     services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
 
     services.upower.ignoreLid = true;

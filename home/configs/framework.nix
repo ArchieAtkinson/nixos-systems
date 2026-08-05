@@ -1,4 +1,9 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 let
 in
 {
@@ -12,6 +17,8 @@ in
   modules.nix-tools.enable = true;
 
   home.packages = with pkgs; [
+    inputs.handy.packages.${system}.default
+    wtype
     kicad
     usbutils
     bluetui # Bluetooth

@@ -2,12 +2,20 @@
   config,
   pkgs,
   hostname,
+  inputs,
   ...
 }:
 let
 
 in
 {
+
+  programs.ydotool = {
+    enable = true;
+  };
+
+  users.users.archie.extraGroups = [ "input" ];
+
   modules.common.enable = true;
   modules.gui.enable = true;
   modules.xremap.enable = true;

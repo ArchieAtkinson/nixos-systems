@@ -52,7 +52,16 @@ in
     programs.nh = {
       enable = true;
       clean.enable = true;
-      clean.extraArgs = "--keep-since 4d --keep 3";
+      clean.extraArgs = "--keep-since 7d --keep 5";
+    };
+
+    services.udev.extraRules = ''
+      SUBSYSTEM=="power_supply", ATTR{status}=="Discharging", ATTR{capacity}=="[0-5]", RUN+="${pkgs.systemd}/bin/systemctl hibernate"
+    '';
+
+    systemd.sleep.settings.Sleep = {
+      HibernateDelaySec = "60min";
+      SuspendState = "mem";
     };
 
   };

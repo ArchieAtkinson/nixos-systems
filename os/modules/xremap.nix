@@ -20,6 +20,13 @@ in
       xremap
     ];
 
+    # Fix to ensure niri and xremap work nicely
+    environment.etc."libinput/local-overrides.quirks".text = ''
+      [xremap]
+      MatchUdevType=keyboard
+      AttrKeyboardIntegration=internal
+    '';
+
     # Couldn't get sudo-less xremap to work
     systemd.services.xremap-system = {
       description = "System xremap service";

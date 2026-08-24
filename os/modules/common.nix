@@ -23,6 +23,7 @@ in
     networking.networkmanager.enable = true;
     services.fwupd.enable = true;
     services.printing.enable = true;
+    programs.nix-ld.enable = true;
 
     services.openssh.enable = true;
 

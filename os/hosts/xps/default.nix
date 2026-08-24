@@ -5,7 +5,6 @@
   ...
 }:
 let
-
 in
 {
   modules.common.enable = true;
@@ -25,6 +24,59 @@ in
   modules.rtl28xx.enable = true;
 
   networking.hostName = hostname;
+
+  services.librechat = {
+    enable = true;
+    enableLocalDB = true; # runs a local MongoDB automatically
+    openFirewall = false; # opens port 3080 (default)
+    # port = 3080;
+    credentialsFile = "/etc/librechat.env"; # path to your secrets (see below)
+    settings = {
+      cache = true;
+      endpoints = {
+        custom = [
+          {
+            apiKey = "\${OPENROUTER_KEY}";
+            baseURL = "https://openrouter.ai/api/v1";
+            dropParams = [
+              "stop"
+            ];
+            modelDisplayLabel = "OpenRouter";
+            models = {
+              default = [
+                "deepseek/deepseek-v4-flash"
+              ];
+              fetch = true;
+            };
+            name = "OpenRouter";
+            titleConvo = true;
+            titleModule = "deepseek/deepseek-v4-flash";
+          }
+        ];
+      };
+      interface = {
+        privacyPolicy = {
+          externalUrl = "https://librechat.ai/privacy-policy";
+          openNewTab = true;
+        };
+
+        contextUsage = true;
+        contextCost = true;
+        currency = {
+          code = "USD";
+          rate = 1;
+        };
+      };
+      version = "1.3.13";
+    };
+  };
+
+  services.mongodb = {
+    enable = true;
+    package = pkgs.mongodb-ce; # ← this solves the slow build
+  };
+
+  networking.firewall.allowedTCPPorts = [ 3080 ];
 
   environment.systemPackages = with pkgs; [
     home-manager

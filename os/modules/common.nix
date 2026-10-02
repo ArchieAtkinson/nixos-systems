@@ -34,6 +34,8 @@ in
 
     environment.variables.EDITOR = "hx";
 
+    programs.nix-ld.enable = true;
+
     console.keyMap = "uk";
     services.xserver = {
       enable = true;

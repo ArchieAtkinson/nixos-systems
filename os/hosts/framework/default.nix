@@ -26,6 +26,7 @@ in
   modules.vpn.proton-vpn = true;
   modules.locale.GB = true;
   modules.syncthing.enable = true;
+  modules.opencode.enable = true;
 
   services.jellyfin = {
     enable = true;

@@ -11,6 +11,7 @@ in
   modules.core-gui.enable = true;
   modules.nix-tools.enable = true;
   modules.fw-dev.enable = true;
+  modules.opencode.enable = true;
 
   home.packages = with pkgs; [
     usbutils

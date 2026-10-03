@@ -18,6 +18,7 @@ in
   modules.vpn.proton-vpn = true;
   modules.locale.GB = true;
   modules.syncthing.enable = true;
+  modules.opencode.enable = true;
 
   modules.udev-rules.nrf-ppk = true;
   modules.udev-rules.probe-rs = true;

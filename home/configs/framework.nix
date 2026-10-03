@@ -15,9 +15,10 @@ in
   modules.core-cli.enable = true;
   modules.core-gui.enable = true;
   modules.nix-tools.enable = true;
+  modules.opencode.enable = true;
 
   home.packages = with pkgs; [
-    inputs.handy.packages.${system}.default
+    inputs.handy.packages.${pkgs.stdenv.hostPlatform.system}.default
     wtype
     kicad
     usbutils

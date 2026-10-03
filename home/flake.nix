@@ -18,6 +18,14 @@
     };
 
     handy.url = "github:cjpais/Handy";
+
+    opencode.url = "github:anomalyco/opencode/v2.0.22";
+
+    # Declarative bubblewrap/seatbelt sandbox for AI agents.
+    agent-sandbox = {
+      url = "github:archie-judd/agent-sandbox.nix/v5.4.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -47,6 +55,7 @@
             ./modules/core-gui.nix
             ./modules/fw-dev.nix
             ./modules/nix-tools.nix
+            ./modules/opencode.nix
           ];
         };
     in

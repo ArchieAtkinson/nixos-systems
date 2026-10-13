@@ -18,7 +18,6 @@ in
 
   config = mkIf cfg.enable {
     services.displayManager.gdm.enable = true;
-    # services.displayManager.gdm.wayland = true;
 
     programs.niri.enable = true;
     programs.waybar.enable = true;

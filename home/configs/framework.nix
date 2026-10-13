@@ -4,8 +4,6 @@
   inputs,
   ...
 }:
-let
-in
 {
   home.username = "archie";
   home.homeDirectory = "/home/archie";
@@ -18,12 +16,22 @@ in
   modules.opencode.enable = true;
   modules.opencode.devShellMode = "closure";
 
+  modules.lan-mouse = {
+    enable = true;
+    clients = [
+      {
+        position = "left";
+        hostname = "192.168.0.67";
+      }
+    ];
+  };
+
   home.packages = with pkgs; [
     inputs.handy.packages.${pkgs.stdenv.hostPlatform.system}.default
     wtype
     kicad
     usbutils
-    bluetui # Bluetooth
+    bluetui
     xournalpp
     vscode
     fastfetch

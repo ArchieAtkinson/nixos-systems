@@ -46,7 +46,6 @@
   powerManagement.enable = true;
   powerManagement.powertop.enable = true;
 
-  # Enables screen rotation
   hardware.sensor.iio.enable = true;
   services.iio-niri = {
     enable = true;

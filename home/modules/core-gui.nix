@@ -24,7 +24,7 @@ in
     programs.firefox.configPath = "${config.xdg.configHome}/mozilla/firefox";
 
     home.packages = with pkgs; [
-      kickoff # App Launcher
+      kickoff
       hyprlock
       ghostty
       swayidle

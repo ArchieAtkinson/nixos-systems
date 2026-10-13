@@ -24,7 +24,6 @@ in
 
     (mkIf cfg.nrf-ppk {
       services.udev.extraRules = ''
-        # For nRF PPK
         SUBSYSTEM=="usb", ATTR{idVendor}=="1915", ATTR{idProduct}=="c00a" MODE="0666", GROUP="dialout"
       '';
     })

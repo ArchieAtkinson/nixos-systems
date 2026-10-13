@@ -5,9 +5,6 @@
   inputs,
   ...
 }:
-let
-
-in
 {
 
   programs.ydotool = {
@@ -27,6 +24,8 @@ in
   modules.locale.GB = true;
   modules.syncthing.enable = true;
   modules.opencode.enable = true;
+
+  networking.firewall.allowedUDPPorts = [ 4242 ]; # lan-mouse
 
   programs.steam = {
     enable = true;
@@ -72,7 +71,6 @@ in
     ./hardware-configuration.nix
   ];
 
-  # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 

@@ -8,10 +8,7 @@
 let
   cfg = config.modules.opencode;
 
-  # Reads that should not prompt. Egress is still gated by allowedDomains, so
-  # this only removes the OpenCode approval step for the curated hosts. The
-  # "*" ask rule stays first as the catch-all. Each host gets both its bare and
-  # "*.host" form, because the permission `*` does not match the literal dot.
+  # Auto-allow these fetch hosts; egress is still gated by allowedDomains.
   fetchAllowRules = lib.concatMap (host: [
     {
       action = "webfetch";
@@ -92,9 +89,7 @@ let
       provider = "exa";
     };
 
-    # Read-only child agents. Children use their own permissions, not a subset
-    # of the parent's, so each is restricted explicitly. Global permission
-    # rules (including the webfetch allowlist) still apply.
+    # Read-only child agents; children use their own permissions.
     agents = {
       researcher = {
         mode = "subagent";
@@ -356,7 +351,6 @@ let
     ] ++ fetchAllowRules;
 
     experimental.policies = [
-      # single allowed provider.
       {
         action = "provider.use";
         resource = "*";
@@ -368,7 +362,6 @@ let
         effect = "allow";
       }
 
-      # hard denies.
       {
         action = "permission";
         resource = "external_directory:*";
@@ -379,8 +372,7 @@ let
         resource = "subagent:*";
         effect = "deny";
       }
-      # ...except the read-oriented subagents. A policy allow only lifts the
-      # deny; the permissions above still decide what the child may do.
+      # ...except the read-oriented subagents (permissions above still apply).
       {
         action = "permission";
         resource = "subagent:explore";
@@ -397,7 +389,6 @@ let
         effect = "allow";
       }
 
-      # secret material.
       {
         action = "permission";
         resource = "read:*.env";

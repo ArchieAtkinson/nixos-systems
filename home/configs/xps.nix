@@ -1,6 +1,4 @@
 { pkgs, lib, ... }:
-let
-in
 {
   home.username = "archie";
   home.homeDirectory = "/home/archie";
@@ -14,9 +12,19 @@ in
   modules.opencode.enable = true;
   modules.opencode.devShellMode = "closure";
 
+  modules.lan-mouse = {
+    enable = true;
+    clients = [
+      {
+        position = "left";
+        hostname = "framework";
+      }
+    ];
+  };
+
   home.packages = with pkgs; [
     usbutils
-    bluetui # Bluetooth
+    bluetui
     xournalpp
     vscode
     fastfetch

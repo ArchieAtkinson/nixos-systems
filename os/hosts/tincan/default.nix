@@ -4,9 +4,6 @@
   hostname,
   ...
 }:
-let
-
-in
 {
   modules.common.enable = true;
   modules.gui.enable = true;

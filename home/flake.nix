@@ -21,11 +21,19 @@
 
     opencode.url = "github:anomalyco/opencode/v2.0.22";
 
-    # Declarative bubblewrap/seatbelt sandbox for AI agents.
     agent-sandbox = {
       url = "github:archie-judd/agent-sandbox.nix/v5.4.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    lan-mouse.url = "github:feschber/lan-mouse";
+  };
+
+  nixConfig = {
+    extra-substituters = [ "https://lan-mouse.cachix.org/" ];
+    extra-trusted-public-keys = [
+      "lan-mouse.cachix.org-1:KlE2AEZUgkzNKM7BIzMQo8w9yJYqUpor1CAUNRY6OyM="
+    ];
   };
 
   outputs =
@@ -54,6 +62,7 @@
             ./modules/core-cli.nix
             ./modules/core-gui.nix
             ./modules/fw-dev.nix
+            ./modules/lan-mouse.nix
             ./modules/nix-tools.nix
             ./modules/opencode.nix
           ];
@@ -72,12 +81,7 @@
         };
       };
 
-      # Per-project dev shells build their own sandbox with this:
-      #
-      #   inputs.nixos-systems.lib.mkOpencodeSandbox {
-      #     inherit pkgs lib;
-      #     agentSandbox = inputs.agent-sandbox.lib.${system};
-      #   } { pkg = pkgs.opencode; extraPackages = projectTools; ... }
+      # Per-project dev shells: inputs.nixos-systems.lib.mkOpencodeSandbox { ... } { ... }
       lib = {
         mkOpencodeSandbox = args: (import ./lib/opencode-sandbox.nix args).mkOpencodeSandbox;
         defaultAllowedDomains = args: (import ./lib/opencode-sandbox.nix args).defaultAllowedDomains;

@@ -1,40 +1,18 @@
-# Builds the sandboxed, policy-guarded OpenCode wrapper.
-#
-# Shared by home/modules/opencode.nix (one global wrapper) and by per-project
-# dev shells that want their project toolchain inside the sandbox. The
-# filesystem view and the filtering proxy are the boundary; the managed policy
-# only shapes behaviour.
-#
-# Callers pass the agent-sandbox library for their system as `agentSandbox`,
-# so this file carries no flake inputs of its own:
-#
-#   (import ./lib/opencode-sandbox.nix {
-#     inherit pkgs lib;
-#     agentSandbox = inputs.agent-sandbox.lib.${pkgs.stdenv.hostPlatform.system};
-#   }).mkOpencodeSandbox { pkg = pkgs.opencode; ... }
+# Builds the sandboxed, policy-guarded OpenCode wrapper shared by the global
+# module and per-project dev shells via .mkOpencodeSandbox.
 { pkgs, lib, agentSandbox }:
 let
   sbx = agentSandbox;
 
-  # gitMinimal drops python/perl. curl stays: egress is filtered by the
-  # proxy, so it is a useful fetch/download tool rather than a way out.
   basePackages = map (p: if (p.pname or "") == "git" then pkgs.gitMinimal else p) sbx.commonTools;
 
-  # Lean baseline beyond commonTools: a scripting runtime plus structured-data
-  # tooling. Project-specific toolchains belong in extraPackages (normally via
-  # a per-project wrapper) so the global view stays small.
   defaultPackages = [
     pkgs.python3
     pkgs.uv
     pkgs.yq
   ];
 
-  # The curated read-only egress allowlist, shared by the global module and
-  # per-project wrappers so a project does not silently start with no network.
-  # Values are "*" (all methods) or a list of HTTP methods; domains match by
-  # suffix, so "wikipedia.org" covers every subdomain.
   defaultAllowedDomains = {
-    # provider + search tooling.
     "opencode.ai" = "*";
     "mcp.exa.ai" = "*";
     "search.parallel.ai" = "*";
@@ -49,14 +27,12 @@ let
     "crates.io" = [ "GET" ];
     "cache.nixos.org" = [ "GET" ];
 
-    # reference.
     "wikipedia.org" = [ "GET" "HEAD" ];
     "wikimedia.org" = [ "GET" "HEAD" ];
     "wikidata.org" = [ "GET" "HEAD" ];
     "wiktionary.org" = [ "GET" "HEAD" ];
     "kagi.com" = [ "GET" "HEAD" ];
 
-    # academic reading.
     "arxiv.org" = [ "GET" "HEAD" ];
     "export.arxiv.org" = [ "GET" "HEAD" ];
     "doi.org" = [ "GET" "HEAD" ];
@@ -74,7 +50,6 @@ let
     "openalex.org" = [ "GET" "HEAD" ];
     "core.ac.uk" = [ "GET" "HEAD" ];
 
-    # standards.
     "ietf.org" = [ "GET" "HEAD" ];
     "rfc-editor.org" = [ "GET" "HEAD" ];
     "w3.org" = [ "GET" "HEAD" ];
@@ -82,7 +57,6 @@ let
     "unicode.org" = [ "GET" "HEAD" ];
     "iana.org" = [ "GET" "HEAD" ];
 
-    # language / library docs.
     "developer.mozilla.org" = [ "GET" "HEAD" ];
     "docs.python.org" = [ "GET" "HEAD" ];
     "doc.rust-lang.org" = [ "GET" "HEAD" ];
@@ -94,13 +68,11 @@ let
     "readthedocs.io" = [ "GET" "HEAD" ];
     "readthedocs.org" = [ "GET" "HEAD" ];
 
-    # community.
     "stackoverflow.com" = [ "GET" "HEAD" ];
     "stackexchange.com" = [ "GET" "HEAD" ];
     "news.ycombinator.com" = [ "GET" "HEAD" ];
     "lobste.rs" = [ "GET" "HEAD" ];
 
-    # archives and public data.
     "web.archive.org" = [ "GET" "HEAD" ];
     "archive.org" = [ "GET" "HEAD" ];
     "gutenberg.org" = [ "GET" "HEAD" ];
@@ -110,7 +82,6 @@ let
     "europa.eu" = [ "GET" "HEAD" ];
     "worldbank.org" = [ "GET" "HEAD" ];
 
-    # news.
     "reuters.com" = [ "GET" "HEAD" ];
     "apnews.com" = [ "GET" "HEAD" ];
     "bbc.co.uk" = [ "GET" "HEAD" ];
@@ -118,14 +89,10 @@ let
     "theguardian.com" = [ "GET" "HEAD" ];
   };
 
-  # Reduced-nix "closure" mode staging directory. The guarded wrapper fills it
-  # with symlinks to the closure of the store paths on PATH; the launcher
-  # follows those into the store and binds them read-only. It lives beside the
-  # OpenCode cache (not inside a declared rw dir) to avoid a nested bind.
+  # Reduced-nix "closure" staging dir (beside the cache to avoid nesting).
   closureStageDir = "$HOME/.cache/opencode-devshell";
 
-  # Mirrors agent-sandbox's implicit bash wrapper so that overriding PATH in
-  # reduced-nix mode does not lose the --norc --noprofile guarantee.
+  # Keep the --norc --noprofile guarantee when PATH is overridden.
   bashNorc = pkgs.runCommand "opencode-bash-norc" {
     nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
   } ''
@@ -141,8 +108,6 @@ in
   mkOpencodeSandbox =
     {
       pkg,
-      # Binary to run inside `pkg`. The name of the produced command is always
-      # `opencode`; this only selects the upstream entrypoint.
       pkgBinName ? "opencode",
       outName ? "opencode-sandboxed",
       policyFile ? "/etc/opencode/opencode.json",
@@ -153,12 +118,6 @@ in
       cacheDir ? "$HOME/.cache/opencode",
       extraPackages ? [ ],
       extraReadOnlyDirs ? [ ],
-      # Reduced-nix mode:
-      #   "off"   - only the closure of allowedPackages is mounted (default).
-      #   "store" - the whole Nix store is mounted read-only and the launching
-      #             shell's PATH is inherited, so a dev shell's tools are
-      #             available to the agent. There is no daemon, so nix cannot
-      #             build or fetch inside the sandbox.
       devShellMode ? "off",
       allowedDomains ? defaultAllowedDomains,
       extraDomains ? { },
@@ -167,14 +126,8 @@ in
     }:
     let
       allPackages = basePackages ++ defaultPackages ++ extraPackages;
-      # bashNorc is bound so the reduced-nix PATH override resolves in closure
-      # mode too (where the store is not wholly mounted).
       bindPackages = allPackages ++ [ bashNorc ];
 
-      # Reduced-nix "closure" mode: stage symlinks to the closure of the store
-      # paths on PATH before launch. The launcher follows them into the store
-      # and binds only those paths read-only, so PATH entries resolve without
-      # exposing the whole store.
       stagingScript = lib.optionalString (devShellMode == "closure") ''
         stage=${closureStageDir}
         new="$stage.new.$$"
@@ -187,8 +140,6 @@ in
           esac
         done | sort -u > "$new/.roots" || true
 
-        # Prefer the system profile's nix-store; fall back to PATH only if it
-        # is absent, so a dev shell cannot substitute the binary we execute.
         nix_store=/nix/var/nix/profiles/default/bin/nix-store
         if [ ! -x "$nix_store" ]; then
           nix_store="$(command -v nix-store || true)"
@@ -210,8 +161,6 @@ in
         done < "$new/.closure"
         rm -f "$new/.roots" "$new/.closure"
 
-        # Swap the complete staging dir into place so a concurrent launch never
-        # scans a half-built set.
         rm -rf "$stage"
         mv -T "$new" "$stage"
       '';
@@ -228,10 +177,7 @@ in
             cacheDir
           ];
 
-          # block writes to global agents/commands/skills/plugins; extra dirs
-          # are read-only context (dotfiles, reference trees). In reduced-nix
-          # mode the whole store is read-only so inherited PATH entries resolve
-          # (overlays bwrap's --tmpfs /nix/store; no daemon socket is exposed).
+          # Read-only context; whole store ro in reduced-nix mode.
           roDirs =
             [ configDir ]
             ++ extraReadOnlyDirs
@@ -244,12 +190,9 @@ in
               OPENCODE_API_KEY = "$(cat ${goKeyFile})";
               OPENCODE_CONFIG_CONTENT = "$(cat ${policyFile})";
               OPENCODE_DISABLE_AUTOUPDATE = "1";
-              # keep uv's downloads inside a persisted rw dir.
               UV_CACHE_DIR = "${cacheDir}/uv";
-              # loopback must bypass the proxy in restricted mode.
               NO_PROXY = "localhost,127.0.0.1,::1";
               no_proxy = "localhost,127.0.0.1,::1";
-              # ignore sandbox-writable git config; identity from host config.
               GIT_CONFIG_NOSYSTEM = "1";
               GIT_CONFIG_GLOBAL = "/dev/null";
               GIT_AUTHOR_NAME = "$(git config --global user.name 2>/dev/null || true)";
@@ -257,15 +200,9 @@ in
               GIT_COMMITTER_NAME = "$(git config --global user.name 2>/dev/null || true)";
               GIT_COMMITTER_EMAIL = "$(git config --global user.email 2>/dev/null || true)";
             }
-            # Set only when disabling: an unset flag and a truthy flag are both
-            # treated as "disabled off/on" without relying on a "0" parse.
             // lib.optionalAttrs disableProjectConfig {
               OPENCODE_DISABLE_PROJECT_CONFIG = "1";
             }
-            # Declared env is applied after the launcher's computed PATH, so
-            # this wins; $PATH expands in the shell that launched the wrapper.
-            # Order: wrapped bash, then the launch shell (dev-shell tools take
-            # precedence), then the sandbox baseline as a fallback.
             // lib.optionalAttrs (devShellMode != "off") {
               PATH = "${lib.makeBinPath [ bashNorc ]}:$PATH:${lib.makeBinPath allPackages}";
             };

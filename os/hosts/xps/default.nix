@@ -27,10 +27,9 @@ in
 
   services.librechat = {
     enable = true;
-    enableLocalDB = true; # runs a local MongoDB automatically
-    openFirewall = false; # opens port 3080 (default)
-    # port = 3080;
-    credentialsFile = "/etc/librechat.env"; # path to your secrets (see below)
+    enableLocalDB = true;
+    openFirewall = false;
+    credentialsFile = "/etc/librechat.env";
     settings = {
       cache = true;
       endpoints = {
@@ -73,10 +72,11 @@ in
 
   services.mongodb = {
     enable = true;
-    package = pkgs.mongodb-ce; # ← this solves the slow build
+    package = pkgs.mongodb-ce;
   };
 
   networking.firewall.allowedTCPPorts = [ 3080 ];
+  networking.firewall.allowedUDPPorts = [ 4242 ]; # lan-mouse
 
   environment.systemPackages = with pkgs; [
     home-manager
@@ -86,7 +86,6 @@ in
     ./hardware-configuration.nix
   ];
 
-  # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 

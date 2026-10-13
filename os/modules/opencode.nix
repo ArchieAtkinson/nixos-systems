@@ -8,6 +8,79 @@
 let
   cfg = config.modules.opencode;
 
+  # Reads that should not prompt. Egress is still gated by allowedDomains, so
+  # this only removes the OpenCode approval step for the curated hosts. The
+  # "*" ask rule stays first as the catch-all. Each host gets both its bare and
+  # "*.host" form, because the permission `*` does not match the literal dot.
+  fetchAllowRules = lib.concatMap (host: [
+    {
+      action = "webfetch";
+      resource = "https://${host}/*";
+      effect = "allow";
+    }
+    {
+      action = "webfetch";
+      resource = "https://*.${host}/*";
+      effect = "allow";
+    }
+  ]) [
+    "wikipedia.org"
+    "wikimedia.org"
+    "wikidata.org"
+    "wiktionary.org"
+    "kagi.com"
+    "arxiv.org"
+    "doi.org"
+    "ncbi.nlm.nih.gov"
+    "europepmc.org"
+    "biorxiv.org"
+    "medrxiv.org"
+    "nature.com"
+    "science.org"
+    "link.springer.com"
+    "plos.org"
+    "openreview.net"
+    "semanticscholar.org"
+    "zenodo.org"
+    "openalex.org"
+    "core.ac.uk"
+    "ietf.org"
+    "rfc-editor.org"
+    "w3.org"
+    "whatwg.org"
+    "unicode.org"
+    "iana.org"
+    "developer.mozilla.org"
+    "docs.python.org"
+    "doc.rust-lang.org"
+    "docs.rs"
+    "go.dev"
+    "pkg.go.dev"
+    "man7.org"
+    "docs.kernel.org"
+    "readthedocs.io"
+    "readthedocs.org"
+    "stackoverflow.com"
+    "stackexchange.com"
+    "news.ycombinator.com"
+    "lobste.rs"
+    "web.archive.org"
+    "archive.org"
+    "gutenberg.org"
+    "openlibrary.org"
+    "data.gov"
+    "who.int"
+    "europa.eu"
+    "worldbank.org"
+    "reuters.com"
+    "apnews.com"
+    "bbc.co.uk"
+    "npr.org"
+    "theguardian.com"
+    "github.com"
+    "githubusercontent.com"
+  ];
+
   # Injected as OPENCODE_CONFIG_CONTENT.
   managedPolicy = {
     "$schema" = "https://opencode.ai/config.json";
@@ -17,6 +90,46 @@ let
     # Exa hosted MCP, no key.
     websearch = {
       provider = "exa";
+    };
+
+    # Read-only child agents. Children use their own permissions, not a subset
+    # of the parent's, so each is restricted explicitly. Global permission
+    # rules (including the webfetch allowlist) still apply.
+    agents = {
+      researcher = {
+        mode = "subagent";
+        description = "Reads code and web sources; cannot edit or run shell";
+        system = "Research only. Cite sources with URLs. Do not modify files or run shell commands.";
+        permissions = [
+          {
+            action = "edit";
+            resource = "*";
+            effect = "deny";
+          }
+          {
+            action = "shell";
+            resource = "*";
+            effect = "deny";
+          }
+        ];
+      };
+      reviewer = {
+        mode = "subagent";
+        description = "Reviews changes without editing";
+        system = "Review only. Report findings in severity order with file and line references. Do not modify files.";
+        permissions = [
+          {
+            action = "edit";
+            resource = "*";
+            effect = "deny";
+          }
+          {
+            action = "shell";
+            resource = "*";
+            effect = "deny";
+          }
+        ];
+      };
     };
 
     permissions = [
@@ -218,7 +331,29 @@ let
         resource = "*";
         effect = "ask";
       }
-    ];
+
+      # subagents: ask by default, allow the read-oriented ones.
+      {
+        action = "subagent";
+        resource = "*";
+        effect = "ask";
+      }
+      {
+        action = "subagent";
+        resource = "explore";
+        effect = "allow";
+      }
+      {
+        action = "subagent";
+        resource = "researcher";
+        effect = "allow";
+      }
+      {
+        action = "subagent";
+        resource = "reviewer";
+        effect = "allow";
+      }
+    ] ++ fetchAllowRules;
 
     experimental.policies = [
       # single allowed provider.
@@ -243,6 +378,23 @@ let
         action = "permission";
         resource = "subagent:*";
         effect = "deny";
+      }
+      # ...except the read-oriented subagents. A policy allow only lifts the
+      # deny; the permissions above still decide what the child may do.
+      {
+        action = "permission";
+        resource = "subagent:explore";
+        effect = "allow";
+      }
+      {
+        action = "permission";
+        resource = "subagent:researcher";
+        effect = "allow";
+      }
+      {
+        action = "permission";
+        resource = "subagent:reviewer";
+        effect = "allow";
       }
 
       # secret material.

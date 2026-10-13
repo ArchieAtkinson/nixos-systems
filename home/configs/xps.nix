@@ -12,6 +12,7 @@ in
   modules.nix-tools.enable = true;
   modules.fw-dev.enable = true;
   modules.opencode.enable = true;
+  modules.opencode.devShellMode = "closure";
 
   home.packages = with pkgs; [
     usbutils

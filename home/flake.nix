@@ -71,6 +71,17 @@
           system = "x86_64-linux";
         };
       };
+
+      # Per-project dev shells build their own sandbox with this:
+      #
+      #   inputs.nixos-systems.lib.mkOpencodeSandbox {
+      #     inherit pkgs lib;
+      #     agentSandbox = inputs.agent-sandbox.lib.${system};
+      #   } { pkg = pkgs.opencode; extraPackages = projectTools; ... }
+      lib = {
+        mkOpencodeSandbox = args: (import ./lib/opencode-sandbox.nix args).mkOpencodeSandbox;
+        defaultAllowedDomains = args: (import ./lib/opencode-sandbox.nix args).defaultAllowedDomains;
+      };
     };
 
 }

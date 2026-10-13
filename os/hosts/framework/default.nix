@@ -28,6 +28,10 @@ in
   modules.syncthing.enable = true;
   modules.opencode.enable = true;
 
+  programs.steam = {
+    enable = true;
+  };
+
   services.jellyfin = {
     enable = true;
     openFirewall = true;

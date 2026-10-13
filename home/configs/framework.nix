@@ -16,6 +16,7 @@ in
   modules.core-gui.enable = true;
   modules.nix-tools.enable = true;
   modules.opencode.enable = true;
+  modules.opencode.devShellMode = "closure";
 
   home.packages = with pkgs; [
     inputs.handy.packages.${pkgs.stdenv.hostPlatform.system}.default

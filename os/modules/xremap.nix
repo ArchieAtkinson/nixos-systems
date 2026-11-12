@@ -27,7 +27,7 @@ in
       AttrKeyboardIntegration=internal
     '';
 
-    # Couldn't get sudo-less xremap to work
+    # System service: xremap needs to read event devices directly.
     systemd.services.xremap-system = {
       description = "System xremap service";
       enable = true;

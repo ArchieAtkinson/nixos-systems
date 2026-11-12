@@ -73,7 +73,6 @@
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
-  # Not currently working
   hardware.fw-fanctrl = {
     enable = true;
     config = {

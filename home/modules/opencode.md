@@ -1,10 +1,15 @@
 # OpenCode sandbox
 
-OpenCode runs in a bubblewrap sandbox (agent-sandbox) under a root-owned
-managed policy. The filesystem view and the filtering proxy are the boundary;
-the policy shapes behaviour, it is not the boundary.
+OpenCode runs in a bubblewrap sandbox under a root-owned managed policy. The
+filesystem view and the filtering proxy are the boundary; the policy shapes
+behaviour, it is not the boundary.
 
-The wrapper is built by `home/lib/opencode-sandbox.nix` and used in two ways:
+The sandbox is built from standard tools only: `bwrap` for namespaces and
+mounts, Squid for the domain allowlist, and `socat` to relay traffic across an
+otherwise empty network namespace. There is no custom proxy, no TLS
+interception, and no host firewall rules. The wrapper is built by
+`home/lib/bwrap-sandbox.nix` (via `home/lib/opencode-sandbox.nix`) and used in
+two ways:
 
 - the global `opencode` from `home/modules/opencode.nix`, optionally in
   reduced-nix mode so it picks up the dev shell you launch it from, and
@@ -13,20 +18,36 @@ The wrapper is built by `home/lib/opencode-sandbox.nix` and used in two ways:
 ## Hardening
 
 - **Filesystem** — the workspace, the OpenCode data dirs (`rwDirs`), and the
-  config dir (`roDir`) are mounted; `$HOME` and `/tmp` are tmpfs. Extra
+  config dir (`roDirs`) are mounted; `$HOME` and `/tmp` are tmpfs. Extra
   read-only context is opt-in through `extraReadOnlyDirs`, and reduced-nix mode
   adds the Nix store (see Dev shells).
-- **Packages** — agent-sandbox `commonTools` (coreutils, gitMinimal, ripgrep,
-  fd, gnused, gnugrep, findutils, diffutils, gawk, jq, less, which, curl) plus
-  a lean baseline of `python3`, `uv`, and `yq`. Project toolchains come from the
-  launching dev shell (reduced-nix mode) or from a per-project wrapper.
-- **Network** — filtering proxy with an `allowedDomains` allowlist: the
+- **Packages** — a lean baseline (coreutils, gitMinimal, ripgrep, fd, gnused,
+  gnugrep, findutils, diffutils, gawk, jq, less, which, curl, `python3`, `uv`,
+  and `yq`). Project toolchains come from the launching dev shell
+  (reduced-nix mode) or from a per-project wrapper.
+- **Network** — per-launch Squid with an `allowedDomains` allowlist: the
   provider and search tooling; package registries (npm, PyPI, crates.io, the
-  Nix cache); GitHub (GET/POST, so an explicitly requested push works); and a
-  curated read-only set (Wikipedia/Wikimedia/Wikidata, Kagi, arXiv/DOI/PubMed
-  and other academic hosts, IETF/RFC/W3C/WHATWG/Unicode, language and library
-  docs, Stack Exchange, Hacker News, archive.org, and a few news sources).
-  Everything else is blocked. `internet = "open"` drops the allowlist.
+  Nix cache); GitHub; and a curated read-only set (Wikipedia/Wikimedia/
+  Wikidata, Kagi, arXiv/DOI/PubMed and other academic hosts,
+  IETF/RFC/W3C/WHATWG/Unicode, language and library docs, Stack Exchange,
+  Hacker News, archive.org, and a few news sources). Everything else is
+  blocked. `internet = "open"` drops the allowlist and the private network
+  namespace.
+  The sandbox runs in a private network namespace with only loopback; a
+  `socat` relay carries HTTP proxy traffic over a Unix socket to Squid on the
+  host. Squid resolves names and sees only the allowed domains, so direct
+  connections from inside the sandbox have no route. TLS is tunnelled with
+  `CONNECT`; it is not intercepted, so method lists apply only to plain HTTP
+  and are not enforced for HTTPS.
+- **Devices** — tty nodes matching `deviceGlobs` (default `/dev/ttyUSB*`,
+  `/dev/ttyACM*`, `/dev/ttyS*`, `/dev/ttyAMA*`) are passed with
+  `--dev-bind-try`; `/dev/serial` is mounted read-only. Only nodes present at
+  launch are visible, so replugging a device requires relaunching the
+  sandbox. With `serial-tty` udev rules the nodes are mode 0666, which is
+  required because bwrap's user namespace drops supplementary groups
+  (`dialout` does not survive). USB debug probes are not ttys; if you need
+  `probe-rs` over USB, add `/dev/bus/usb/*/*` to `deviceGlobs` (and the
+  matching udev access rule).
 - **Secrets** — API key injected from sops into env at launch, never in the
   store. Policy denies env/secret reads and `external_directory`.
 - **Policy** — shell, search, and fetch run without prompting; the sandbox view
@@ -66,8 +87,9 @@ use the shell you launch it from:
   `PATH` store paths without computing their closure; if nothing is staged, only
   the baseline is available.
 
-Both enabled modes keep egress filtered and expose no sockets or daemon.
-`PATH` becomes a wrapped `bash`, then the launching shell's `PATH` (so the dev
+Both enabled modes keep egress filtered and expose no host sockets or daemon
+(the only socket in the sandbox is the read-only relay to the per-launch
+proxy). `PATH` becomes a wrapped `bash`, then the launching shell's `PATH` (so the dev
 shell's tools take precedence), then the sandbox baseline as a fallback. Direct
 store-path entries (what `nix develop` puts on `PATH`) resolve; entries routed
 through `~/.nix-profile` or `/nix/var` do not, since those roots are not
@@ -88,12 +110,6 @@ build a wrapper in the project's flake and put it in the dev shell:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # The same sandbox library the global wrapper uses.
-    agent-sandbox = {
-      url = "github:archie-judd/agent-sandbox.nix/v5.4.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Exports lib.mkOpencodeSandbox. While developing locally, use a path
     # input instead: url = "path:/home/archie/nixos-systems/home";
     nixos-systems = {
@@ -105,7 +121,7 @@ build a wrapper in the project's flake and put it in the dev shell:
     opencode.url = "github:anomalyco/opencode/v2.0.22";
   };
 
-  outputs = { self, nixpkgs, agent-sandbox, nixos-systems, opencode, ... }:
+  outputs = { self, nixpkgs, nixos-systems, opencode, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -122,7 +138,6 @@ build a wrapper in the project's flake and put it in the dev shell:
 
       opencode-sandboxed = (nixos-systems.lib.mkOpencodeSandbox {
         inherit pkgs lib;
-        agentSandbox = agent-sandbox.lib.${system};
       }) {
         pkg = opencodePkg;
 
@@ -156,7 +171,6 @@ changes:
 ```nix
 opencode-sandboxed = (nixos-systems.lib.mkOpencodeSandbox {
   inherit pkgs lib;
-  agentSandbox = agent-sandbox.lib.${system};
 }) {
   pkg = opencodePkg;
   extraPackages = with pkgs; [ duckdb miller ];
@@ -186,6 +200,14 @@ default `true`.
   build-time. Symlinks inside a declared dir are only followed into the Nix
   store; symlinks to home paths are ignored. Per-session, arbitrary mounts are
   not supported.
+- **Domain-only proxy** — because HTTPS is tunnelled rather than intercepted,
+  `allowedDomains` values that list HTTP methods are not enforced for HTTPS.
+  This is a deliberate trade for dropping the custom MITM proxy and CA.
+- **TTY hotplug** — device binds are fixed at launch. A replugged or
+  newly-attached serial device is invisible until the sandbox is restarted.
+  The udev `serial-tty` option sets serial nodes to mode 0666, which is
+  visible to every local user; `dialout` alone cannot work because bwrap's
+  user namespace drops supplementary groups.
 - **Reduced nix** — `devShellMode = "store"` exposes the whole store read-only
   (fingerprinting; any store binary runnable) and inherits the launch shell's
   `PATH`; profile symlinks under `~/.nix-profile` or `/nix/var` are not mounted,

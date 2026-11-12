@@ -21,11 +21,6 @@
 
     opencode.url = "github:anomalyco/opencode/v2.0.22";
 
-    agent-sandbox = {
-      url = "github:archie-judd/agent-sandbox.nix/v5.4.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     lan-mouse.url = "github:feschber/lan-mouse";
   };
 

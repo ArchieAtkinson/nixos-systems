@@ -1,26 +1,5 @@
 {
   "nodes": {
-    "agent-sandbox": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1790710161,
-        "narHash": "sha256-NzKOsbFW5UgCup+xBELoKRJWOuGhxJ46PG+fWc/B2cA=",
-        "owner": "archie-judd",
-        "repo": "agent-sandbox.nix",
-        "rev": "6583c966f0920b85439659a6e856e6c9aa859190",
-        "type": "github"
-      },
-      "original": {
-        "owner": "archie-judd",
-        "ref": "v5.4.1",
-        "repo": "agent-sandbox.nix",
-        "type": "github"
-      }
-    },
     "bun2nix": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -273,7 +252,6 @@
     },
     "root": {
       "inputs": {
-        "agent-sandbox": "agent-sandbox",
         "handy": "handy",
         "home-manager": "home-manager",
         "lan-mouse": "lan-mouse",

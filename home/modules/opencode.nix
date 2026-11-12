@@ -18,7 +18,6 @@ let
   # Shared builder: the global wrapper and per-project dev shells use it.
   opencodeSandbox = import ../lib/opencode-sandbox.nix {
     inherit pkgs lib;
-    agentSandbox = inputs.agent-sandbox.lib.${system};
   };
   mkOpencodeSandbox = opencodeSandbox.mkOpencodeSandbox;
 
@@ -32,6 +31,7 @@ let
     cacheDir = cfg.cacheDir;
     extraPackages = cfg.extraPackages;
     extraReadOnlyDirs = cfg.extraReadOnlyDirs;
+    deviceGlobs = cfg.deviceGlobs;
     devShellMode = cfg.devShellMode;
     allowedDomains = cfg.allowedDomains;
     extraDomains = cfg.extraDomains;
@@ -46,7 +46,7 @@ in
       type = lib.types.package;
       default = upstream;
       defaultText = lib.literalExpression "inputs.opencode.packages.\${system}.opencode";
-      description = "OpenCode package to run inside the agent-sandbox.";
+      description = "OpenCode package to run inside the bwrap sandbox.";
     };
 
     configDir = lib.mkOption {
@@ -97,23 +97,20 @@ in
     };
 
     allowedDomains = lib.mkOption {
-      type = lib.types.attrsOf (
-        lib.types.either lib.types.str (lib.types.listOf lib.types.str)
-      );
+      type = lib.types.attrsOf (lib.types.either lib.types.str (lib.types.listOf lib.types.str));
       default = opencodeSandbox.defaultAllowedDomains;
       defaultText = lib.literalMD "the curated default allowlist";
       description = ''
-        Egress allowlist when internet = "restricted". Value is "*" (all
-        methods) or a list of HTTP methods. Domains match by suffix; anything
-        not listed is blocked by the proxy. Defaults to the curated read-only
-        set shared with per-project wrappers.
+        Egress allowlist when internet = "restricted". Value is "*" or a list
+        of HTTP methods. Domains match by suffix; anything not listed is
+        blocked by Squid. Method lists are enforced for plain HTTP; HTTPS is
+        tunnelled with CONNECT, so only the domain is enforced there.
+        Defaults to the curated set shared with per-project wrappers.
       '';
     };
 
     extraDomains = lib.mkOption {
-      type = lib.types.attrsOf (
-        lib.types.either lib.types.str (lib.types.listOf lib.types.str)
-      );
+      type = lib.types.attrsOf (lib.types.either lib.types.str (lib.types.listOf lib.types.str));
       default = { };
       description = ''
         Extra egress allowlist entries merged over allowedDomains (same shape
@@ -131,8 +128,9 @@ in
       default = [ ];
       description = ''
         Packages added to the sandbox on top of the lean baseline
-        (agent-sandbox commonTools with curl, plus python3, uv and yq).
-        Prefer a per-project wrapper for project toolchains.
+        (coreutils, git, ripgrep, fd, sed/grep, findutils, diffutils, gawk,
+        jq, less, which, curl, plus python3, uv and yq). Prefer a per-project
+        wrapper for project toolchains.
       '';
       example = lib.literalExpression "[ pkgs.duckdb pkgs.miller ]";
     };
@@ -146,6 +144,23 @@ in
         the launch.
       '';
       example = lib.literalExpression ''[ "$HOME/dotfiles" "$HOME/notes" ]'';
+    };
+
+    deviceGlobs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "/dev/ttyUSB*"
+        "/dev/ttyACM*"
+        "/dev/ttyS*"
+        "/dev/ttyAMA*"
+      ];
+      description = ''
+        Device node globs passed through to the sandbox with bwrap
+        --dev-bind-try. Only nodes present at launch are bound; replugging a
+        device requires relaunching the sandbox. The host must grant the
+        launching user access (the serial-tty udev option sets mode 0666).
+      '';
+      example = lib.literalExpression ''[ "/dev/ttyUSB*" "/dev/ttyACM*" ]'';
     };
 
     devShellMode = lib.mkOption {
@@ -169,12 +184,14 @@ in
   config = lib.mkIf cfg.enable {
     # declared binds must exist before launch.
     home.activation.opencodeSandboxDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run mkdir -p ${lib.escapeShellArgs [
-        cfg.configDir
-        cfg.dataDir
-        cfg.cacheDir
-        cfg.stateDir
-      ]}
+      run mkdir -p ${
+        lib.escapeShellArgs [
+          cfg.configDir
+          cfg.dataDir
+          cfg.cacheDir
+          cfg.stateDir
+        ]
+      }
     '';
 
     # advisory only; the sandbox is the boundary.

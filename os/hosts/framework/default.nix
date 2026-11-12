@@ -52,6 +52,7 @@ in
   modules.locale.GB = true;
   modules.syncthing.enable = true;
   modules.opencode.enable = true;
+  modules.udev-rules.serial-tty = true;
 
   programs.niri.package = inputs.biri.packages.${pkgs.stdenv.hostPlatform.system}.niri;
 

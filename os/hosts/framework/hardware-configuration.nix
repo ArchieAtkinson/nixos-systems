@@ -17,7 +17,7 @@
     "usb_storage"
     "sd_mod"
   ];
-  boot.initrd.kernelModules = [ "pinctrl_tigerlake" ];
+  boot.initrd.kernelModules = [ "pinctrl_alderlake" ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.kernelParams = [ "i915.enable_psr=0" ];
   boot.extraModulePackages = [ ];

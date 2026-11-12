@@ -5,13 +5,41 @@
   inputs,
   ...
 }:
+let
+  # Run on Moonlight connect: enable the virtual output, then restart Sunshine
+  # (rate-limited) so it re-binds RTSP and re-selects the now-enabled output.
+  sunshineReset = pkgs.writeShellScript "sunshine-prep" ''
+    export PATH="/run/current-system/sw/bin:$PATH"
+
+    # Stop lan-mouse before changing the display layout: its input-capture
+    # panics when outputs change, and it shouldn't grab input back to the
+    # Windows PC while that PC is the Moonlight display.
+    systemctl --user stop lan-mouse || true
+
+    niri msg output sunshine on || true
+
+    guard="''${XDG_RUNTIME_DIR:-/tmp}/sunshine-rtsp-reset"
+    now=$(date +%s)
+    last=0
+    if [ -e "$guard" ]; then last=$(stat -c %Y "$guard" 2>/dev/null || echo 0); fi
+    if [ $((now - last)) -gt 60 ]; then
+      touch "$guard"
+      systemctl --user restart sunshine
+    fi
+  '';
+  sunshineUndo = pkgs.writeShellScript "sunshine-undo" ''
+    export PATH="/run/current-system/sw/bin:$PATH"
+    niri msg output sunshine off || true
+    systemctl --user start lan-mouse || true
+  '';
+in
 {
 
   programs.ydotool = {
     enable = true;
   };
 
-  users.users.archie.extraGroups = [ "input" ];
+  users.users.archie.extraGroups = [ "input" "uinput" ];
 
   modules.common.enable = true;
   modules.gui.enable = true;
@@ -24,6 +52,29 @@
   modules.locale.GB = true;
   modules.syncthing.enable = true;
   modules.opencode.enable = true;
+
+  programs.niri.package = inputs.biri.packages.${pkgs.stdenv.hostPlatform.system}.niri;
+
+  # Intel VAAPI for hardware video encoding (Sunshine)
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [ intel-media-driver ];
+  };
+  environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
+
+  services.sunshine = {
+    enable = true;
+    autoStart = true;
+    capSysAdmin = true;
+    openFirewall = true;
+    settings = {
+      capture = "wlr";
+      output_name = "sunshine";
+      # More forward error correction to ride out Wi-Fi jitter/loss on audio.
+      fec_percentage = 50;
+      global_prep_cmd = ''[{"do":"${sunshineReset}","undo":"${sunshineUndo}"}]'';
+    };
+  };
 
   networking.firewall.allowedUDPPorts = [ 4242 ]; # lan-mouse
 
@@ -63,6 +114,7 @@
     glib-networking # TLS backend for GIO
     gsettings-desktop-schemas
     framework-tool
+    intel-gpu-tools # intel_gpu_top, for checking iGPU engine load
   ];
 
   programs.dconf.enable = true;

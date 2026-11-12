@@ -128,11 +128,11 @@ let
     };
 
     permissions = [
-      # shell asks by default; allow read-only inspection.
+      # shell is allowed without prompting; the sandbox is the boundary.
       {
         action = "shell";
         resource = "*";
-        effect = "ask";
+        effect = "allow";
       }
       {
         action = "shell";
@@ -316,22 +316,23 @@ let
         effect = "allow";
       }
 
+      # fetch and search are allowed without prompting; egress stays filtered.
       {
         action = "webfetch";
         resource = "*";
-        effect = "ask";
+        effect = "allow";
       }
       {
         action = "websearch";
         resource = "*";
-        effect = "ask";
+        effect = "allow";
       }
 
-      # subagents: ask by default, allow the read-oriented ones.
+      # subagents: allowed by default, restricted ones denied below.
       {
         action = "subagent";
         resource = "*";
-        effect = "ask";
+        effect = "allow";
       }
       {
         action = "subagent";
@@ -363,131 +364,131 @@ let
       }
 
       {
-        action = "permission";
+        action = "tool.use";
         resource = "external_directory:*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "subagent:*";
         effect = "deny";
       }
       # ...except the read-oriented subagents (permissions above still apply).
       {
-        action = "permission";
+        action = "tool.use";
         resource = "subagent:explore";
         effect = "allow";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "subagent:researcher";
         effect = "allow";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "subagent:reviewer";
         effect = "allow";
       }
 
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.env";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.env.*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.env.example";
         effect = "allow";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.pem";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.key";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.sops";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*.age";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*credentials*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:*secret*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*.env*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*credentials*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*secret*";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*.pem";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*.key";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*.sops";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "edit:*.age";
         effect = "deny";
       }
 
       # the key is in env; deny env reads.
       {
-        action = "permission";
+        action = "tool.use";
         resource = "shell:env";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "shell:env *";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "shell:printenv *";
         effect = "deny";
       }
       {
-        action = "permission";
+        action = "tool.use";
         resource = "read:/proc/*";
         effect = "deny";
       }

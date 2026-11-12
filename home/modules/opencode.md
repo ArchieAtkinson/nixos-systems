@@ -29,10 +29,11 @@ The wrapper is built by `home/lib/opencode-sandbox.nix` and used in two ways:
   Everything else is blocked. `internet = "open"` drops the allowlist.
 - **Secrets** — API key injected from sops into env at launch, never in the
   store. Policy denies env/secret reads and `external_directory`.
-- **Policy** — shell, search, and fetch ask by default; read-only inspection is
-  allowed; egress reads for the curated hosts are allowed without prompting;
-  provider pinned to `opencode-go`. The `explore`, `researcher`, and `reviewer`
-  subagents are permitted; all others are hard-denied.
+- **Policy** — shell, search, and fetch run without prompting; the sandbox view
+  and proxy are the controls. The curated hosts remain explicit `webfetch`
+  allow rules, and secret, env, and `/proc` reads are hard `tool.use` denials.
+  The provider is pinned to `opencode-go`. The `explore`, `researcher`, and
+  `reviewer` subagents are permitted; all others are hard-denied.
 - **Fail-closed** — the wrapper refuses to launch if the policy/key is missing,
   invalid, or missing sentinel rules.
 
@@ -173,11 +174,13 @@ default `true`.
   egress is restricted (no attacker-controlled host is reachable). A broad
   `"*"` GET allowlist would allow URL-based exfiltration, so the allowlist
   stays curated. Secret masking is deferred.
-- **No command bans** — name-based shell denies are bypassable, so the sandbox
-  view and proxy are the real controls; shell still asks by default.
-- **Scripting runtime** — `python3` and `uv` make the `shell: ask` prompt a
-  weaker review gate (a `python -c` is not readable at a glance). This is a
-  policy-layer weakening, not a boundary one; the fs view and proxy still
+- **No review prompt** — shell runs without asking; the only hard denials are
+  the secret/env/`/proc` patterns. A prompt-injected model can therefore run any
+  command the sandbox permits, with no human gate. The fs view and proxy are the
+  controls.
+- **Scripting runtime** — `python3` and `uv` mean a command prompt would be a
+  weak gate anyway (a `python -c` is not readable at a glance). This is a
+  policy-layer trade-off, not a boundary one; the fs view and proxy still
   bound what any interpreter can do.
 - **Runtime dirs** — `extraReadOnlyDirs` and per-project packages are
   build-time. Symlinks inside a declared dir are only followed into the Nix

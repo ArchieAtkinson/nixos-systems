@@ -178,6 +178,6 @@ Prefer the dedicated tools over shell improvisation:
 ### Commands and git
 
 - Prefer read-only inspection (`git status/diff/log/show`, `ls`, `cat`, `grep`,
-  `rg`, `fd`). Shell asks by default.
+  `rg`, `fd`). Shell runs without prompting, so keep commands deliberate.
 - Commit to the current branch only; do not push unless asked.
 - Git identity is provided from the host; do not change git config.

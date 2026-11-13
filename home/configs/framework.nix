@@ -14,7 +14,6 @@
   modules.core-gui.enable = true;
   modules.nix-tools.enable = true;
   modules.opencode.enable = true;
-  modules.opencode.devShellMode = "closure";
 
   modules.lan-mouse = {
     enable = true;

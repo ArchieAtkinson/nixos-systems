@@ -1,15 +1,14 @@
-# Minimal bubblewrap sandbox for the OpenCode wrapper.
+# Fixed-policy bubblewrap sandbox for the OpenCode wrapper.
 #
-# Security boundary:
-#   * bwrap user/mount/PID/IPC/UTS/cgroup namespaces, empty root, tmpfs home.
-#   * restricted egress: private netns plus a Unix-socket relay to a per-launch
-#     Squid. The sandbox has no route to the host or the internet except the
-#     relay socket, and Squid only allows the generated domain ACLs.
-#   * tty nodes are explicitly dev-bound. Everything else in /dev is the
-#     minimal set bwrap creates.
+# There are no user-facing sandbox knobs: the policy lives here.
 #
-# Only standard tools are involved (bubblewrap, Squid, socat); there is no
-# TLS interception, no host firewall rules, and no custom proxy protocol.
+#   * closure-only /nix/store: baseline packages plus the closure of PATH
+#   * no host root, /run, /proc host pids, Docker/DBus sockets
+#   * private netns; Squid over a Unix-socket relay
+#   * all USB/serial nodes present at launch are dev-bound (no hotplug)
+#   * runtime host-loopback TCP ports from ~/.config/opencode/sandbox-ports
+#   * git metadata read-only; hooks/config/alternates cannot be planted
+#   * fake passwd/group/hosts and masked /proc/cmdline + boot id
 { pkgs, lib }:
 let
   inherit (builtins)
@@ -19,9 +18,6 @@ let
     substring
     ;
 
-  # Quote a Nix string for a shell double-quoted context while leaving `$`
-  # expansion intact, so values such as "$(cat /run/secrets/...)" and "$HOME"
-  # are evaluated on the host at launch.
   dquote = s: "\"${replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s}\"";
 
   aclName = domain: "d_${substring 0 12 (hashString "sha256" domain)}";
@@ -83,14 +79,6 @@ in
       roDirs ? [ ],
       env ? { },
       allowedDomains ? { },
-      internet ? "restricted",
-      deviceGlobs ? [
-        "/dev/ttyUSB*"
-        "/dev/ttyACM*"
-        "/dev/ttyS*"
-        "/dev/ttyAMA*"
-      ],
-      devShellMode ? "off",
     }:
     let
       sandboxTools = with pkgs; [
@@ -99,7 +87,7 @@ in
         socat
       ];
 
-      closure = pkgs.closureInfo {
+      baselineClosure = pkgs.closureInfo {
         rootPaths = [ pkg ] ++ allowedPackages ++ pathPrefix ++ sandboxTools;
       };
 
@@ -110,149 +98,17 @@ in
       bwrap = "${pkgs.bubblewrap}/bin/bwrap";
       socat = "${pkgs.socat}/bin/socat";
       squid = "${pkgs.squid}/bin/squid";
-
-      restricted = internet == "restricted";
-
       squidTemplate = pkgs.writeText "ai-sandbox-squid.conf" (squidConfig allowedDomains);
 
-      pathValue =
-        if devShellMode == "off" then
-          "${prefixPath}${restPath}"
-        else if devShellMode == "store" then
-          "${prefixPath}$PATH:${restPath}"
-        else if devShellMode == "closure" then
-          "${prefixPath}$stage:$PATH:${restPath}"
-        else
-          throw "bwrap-sandbox: unknown devShellMode ${devShellMode}";
-
-      stagingScript = lib.optionalString (devShellMode == "closure") ''
-        new="$stage.new.$$"
-        rm -rf "$new"
-        mkdir -p "$new"
-
-        printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r entry; do
-          case "$entry" in
-            /nix/store/*/bin) dirname "$entry" ;;
-          esac
-        done | sort -u > "$new/.roots" || true
-
-        nix_store=/nix/var/nix/profiles/default/bin/nix-store
-        if [ ! -x "$nix_store" ]; then
-          nix_store="$(command -v nix-store || true)"
-        fi
-
-        : > "$new/.closure"
-        if [ -n "$nix_store" ] && [ -s "$new/.roots" ]; then
-          mapfile -t roots < "$new/.roots"
-          "$nix_store" --query --requisites "''${roots[@]}" 2>/dev/null \
-            | sort -u > "$new/.closure" || true
-        else
-          cp "$new/.roots" "$new/.closure" 2>/dev/null || true
-        fi
-
-        while IFS= read -r p; do
-          if [ -n "$p" ]; then
-            ln -sfn "$p" "$new/$(basename "$p")"
-          fi
-        done < "$new/.closure"
-        rm -f "$new/.roots" "$new/.closure"
-
-        rm -rf "$stage"
-        mv -T "$new" "$stage"
-      '';
-
-      proxySetup = lib.optionalString restricted ''
-        runtime=$(mktemp -d "''${TMPDIR:-/tmp}/ai-sandbox.XXXXXX")
-        port="''${AI_SANDBOX_PROXY_PORT:-$(( 30000 + RANDOM % 20000 ))}"
-        user=$(id -un)
-        sed -e "s|__PORT__|$port|g" \
-          -e "s|__RUNDIR__|$runtime|g" \
-          -e "s|__USER__|$user|g" \
-          ${squidTemplate} > "$runtime/squid.conf"
-
-        ${squid} -N -f "$runtime/squid.conf" &
-        squid_pid=$!
-
-        for _ in $(seq 1 100); do
-          if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
-            exec 3>&-
-            break
-          fi
-          sleep 0.1
+      deviceArgs = ''
+        for pattern in /dev/ttyUSB* /dev/ttyACM* /dev/ttyS* /dev/ttyAMA*; do
+          while IFS= read -r dev; do
+            [ -n "$dev" ] && args+=(--dev-bind-try "$dev" "$dev")
+          done < <(compgen -G "$pattern" || true)
         done
-        if ! kill -0 "$squid_pid" 2>/dev/null; then
-          printf 'ai-sandbox: Squid failed to start; see %s\n' "$runtime/cache.log" >&2
-          cat "$runtime/cache.log" >&2 || true
-          exit 1
-        fi
-
-        sockdir="$runtime/sock"
-        mkdir -p "$sockdir"
-        chmod 700 "$sockdir"
-        sock="$sockdir/proxy.sock"
-        ${socat} "UNIX-LISTEN:$sock,fork,unlink-early,mode=600" \
-          "TCP:127.0.0.1:$port" &
-        relay_pid=$!
-
-        for _ in $(seq 1 100); do
-          [ -S "$sock" ] && break
-          kill -0 "$relay_pid" 2>/dev/null || break
-          sleep 0.1
-        done
-        if [ ! -S "$sock" ]; then
-          printf 'ai-sandbox: proxy relay failed to start\n' >&2
-          exit 1
-        fi
-
-        args+=(
-          --unshare-net
-          --ro-bind "$sockdir" /run/ai-proxy
-          --setenv HTTP_PROXY "http://127.0.0.1:3128"
-          --setenv HTTPS_PROXY "http://127.0.0.1:3128"
-          --setenv ALL_PROXY "http://127.0.0.1:3128"
-          --setenv http_proxy "http://127.0.0.1:3128"
-          --setenv https_proxy "http://127.0.0.1:3128"
-          --setenv all_proxy "http://127.0.0.1:3128"
-          --setenv NO_PROXY "localhost,127.0.0.1,::1"
-          --setenv no_proxy "localhost,127.0.0.1,::1"
-        )
+        args+=(--dev-bind-try /dev/bus/usb /dev/bus/usb)
+        args+=(--ro-bind-try /dev/serial /dev/serial)
       '';
-
-      relayScript = ''
-        set -e
-        ${socat} TCP-LISTEN:3128,bind=127.0.0.1,reuseaddr,fork \
-          UNIX-CONNECT:/run/ai-proxy/proxy.sock &
-        for _ in {1..50}; do
-          if (exec 3<>/dev/tcp/127.0.0.1/3128) 2>/dev/null; then
-            exec 3>&-
-            break
-          fi
-          sleep 0.1
-        done
-        if ! (exec 3<>/dev/tcp/127.0.0.1/3128) 2>/dev/null; then
-          printf 'ai-sandbox: proxy relay is not listening\n' >&2
-          exit 1
-        fi
-        exec "$@"
-      '';
-
-      app =
-        if restricted then
-          [
-            bash
-            "-c"
-            relayScript
-            "ai-sandbox"
-            (lib.getExe' pkg binName)
-          ]
-        else
-          [ (lib.getExe' pkg binName) ];
-
-      deviceArgs = lib.concatMapStringsSep "\n" (pattern: ''
-        while IFS= read -r dev; do
-          [ -n "$dev" ] && args+=(--dev-bind-try "$dev" "$dev")
-        done < <(compgen -G ${lib.escapeShellArg pattern} || true)
-      '') deviceGlobs;
 
       roArgs = lib.concatMapStringsSep "\n" (dir: ''
         dir=${dquote dir}
@@ -281,6 +137,38 @@ in
         '') env
       );
 
+      relayScript = ''
+        set -e
+        ${socat} TCP-LISTEN:3128,bind=127.0.0.1,reuseaddr,fork \
+          UNIX-CONNECT:/run/ai-relay/http.sock &
+        for port in $AI_SANDBOX_FORWARD_PORTS; do
+          ${socat} TCP-LISTEN:"$port",bind=127.0.0.1,reuseaddr,fork \
+            UNIX-CONNECT:"/run/ai-relay/forward-$port.sock" &
+        done
+        for port in 3128 $AI_SANDBOX_FORWARD_PORTS; do
+          for _ in {1..50}; do
+            if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+              exec 3>&-
+              break
+            fi
+            sleep 0.1
+          done
+          if ! (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+            printf 'ai-sandbox: relay is not listening on port %s\n' "$port" >&2
+            exit 1
+          fi
+        done
+        exec "$@"
+      '';
+
+      app = [
+        bash
+        "-c"
+        relayScript
+        "ai-sandbox"
+        (lib.getExe' pkg binName)
+      ];
+
       script = ''
         set -euo pipefail
 
@@ -298,15 +186,16 @@ in
           ]
         }:$PATH"
 
-        runtime=""
+        runtime=$(mktemp -d "''${TMPDIR:-/tmp}/ai-sandbox.XXXXXX")
         squid_pid=""
-        relay_pid=""
-        stage="$HOME/.cache/opencode-devshell"
+        relay_pids=()
 
         cleanup() {
-          [ -n "$relay_pid" ] && kill "$relay_pid" 2>/dev/null || true
+          for pid in "''${relay_pids[@]}"; do
+            kill "$pid" 2>/dev/null || true
+          done
           [ -n "$squid_pid" ] && kill "$squid_pid" 2>/dev/null || true
-          [ -n "$runtime" ] && rm -rf "$runtime" || true
+          rm -rf "$runtime"
         }
         trap cleanup EXIT
 
@@ -332,6 +221,8 @@ in
           --dir /usr
           --dir /usr/bin
           --dir /bin
+          --dir /sys
+          --ro-bind-try /sys /sys
           --proc /proc
           --dev /dev
           --perms 1777 --tmpfs /dev/shm
@@ -348,47 +239,122 @@ in
           --unshare-pid
           --unshare-uts
           --unshare-cgroup
+          --unshare-net
         )
 
         while IFS= read -r p; do
           [ -n "$p" ] && args+=(--ro-bind "$p" "$p")
-        done < ${closure}/store-paths
+        done < ${baselineClosure}/store-paths
 
-        ${lib.optionalString (devShellMode == "store") ''
-          args+=(--ro-bind /nix/store /nix/store)
-        ''}
+        # Closure of the current PATH: nix develop tools and NixOS default
+        # apps. Nothing else from the store is visible.
+        roots="$runtime/roots"
+        closure_file="$runtime/closure"
+        : > "$roots"
 
-        ${stagingScript}
+        printf '%s\n' "$PATH" | tr ':' '\n' | while IFS= read -r entry; do
+          case "$entry" in
+            /nix/store/*/bin)
+              dirname "$entry"
+              ;;
+            /run/current-system/sw/bin)
+              for link in "$entry"/*; do
+                [ -e "$link" ] || continue
+                target=$(readlink -f "$link" 2>/dev/null || true)
+                case "$target" in
+                  /nix/store/*) printf '%s\n' "$target" ;;
+                esac
+              done
+              ;;
+          esac
+        done | sort -u > "$roots"
 
-        ${lib.optionalString (devShellMode == "closure") ''
-          if [ -d "$stage" ]; then
-            args+=(--ro-bind "$stage" "$stage")
-            for p in "$stage"/*; do
-              [ -e "$p" ] || continue
-              target=$(readlink -f "$p" 2>/dev/null || true)
-              case "$target" in
-                /nix/store/*) args+=(--ro-bind "$target" "$target") ;;
+        nix_store=/nix/var/nix/profiles/default/bin/nix-store
+        if [ ! -x "$nix_store" ]; then
+          nix_store="$(command -v nix-store || true)"
+        fi
+
+        : > "$closure_file"
+        if [ -n "$nix_store" ] && [ -s "$roots" ]; then
+          mapfile -t roots_arr < "$roots"
+          "$nix_store" --query --requisites "''${roots_arr[@]}" \
+            | sort -u > "$closure_file" || true
+        else
+          cp "$roots" "$closure_file" 2>/dev/null || true
+        fi
+
+        while IFS= read -r p; do
+          [ -n "$p" ] && args+=(--ro-bind "$p" "$p")
+        done < "$closure_file"
+
+        args+=(--ro-bind-try /run/current-system/sw/bin /run/current-system/sw/bin)
+
+        # Git: keep the object database writable, but make hooks/config/
+        # alternates read-only. Also protect worktree metadata.
+        git_root=$(git -C "$workspace" rev-parse --show-toplevel 2>/dev/null || true)
+        if [ -n "$git_root" ]; then
+          git_common=$(git -C "$git_root" rev-parse --git-common-dir 2>/dev/null || true)
+          case "$git_common" in
+            /*) ;;
+            *) git_common="$git_root/$git_common" ;;
+          esac
+          git_common=$(realpath -e "$git_common" 2>/dev/null || printf '%s' "$git_common")
+
+          case "$git_root" in
+            /|"$HOME"|/home|/root)
+              printf 'ai-sandbox: refusing to bind repository root %s\n' "$git_root" >&2
+              exit 1
+              ;;
+          esac
+          [ "$git_root" != "$workspace" ] && args+=(--bind "$git_root" "$git_root")
+          args+=(--bind "$git_common" "$git_common")
+
+          empty_dir="$runtime/empty-dir"
+          empty_file="$runtime/empty-file"
+          mkdir -p "$empty_dir"
+          : > "$empty_file"
+
+          for protected in \
+            "$git_common/hooks" \
+            "$git_common/config" \
+            "$git_common/objects/info/alternates"; do
+            if [ -e "$protected" ]; then
+              args+=(--ro-bind "$protected" "$protected")
+            else
+              case "$protected" in
+                */hooks) args+=(--ro-bind "$empty_dir" "$protected") ;;
+                *) args+=(--ro-bind "$empty_file" "$protected") ;;
               esac
-            done
-          fi
-        ''}
+            fi
+          done
+        fi
+
+        # Fake identity files; keep the host kernel/host entries out.
+        user=$(id -un)
+        uid=$(id -u)
+        gid=$(id -g)
+        printf '%s:x:%s:%s::%s:/bin/sh\n' "$user" "$uid" "$gid" "$HOME" > "$runtime/passwd"
+        printf '%s:x:%s:\n' "$user" "$gid" > "$runtime/group"
+        printf '127.0.0.1 localhost\n::1 localhost\n' > "$runtime/hosts"
+        : > "$runtime/empty"
 
         args+=(
+          --ro-bind "$runtime/passwd" /etc/passwd
+          --ro-bind "$runtime/group" /etc/group
+          --ro-bind "$runtime/hosts" /etc/hosts
+          --ro-bind "$runtime/empty" /proc/cmdline
+          --ro-bind "$runtime/empty" /proc/sys/kernel/random/boot_id
+          --ro-bind-try /etc/nsswitch.conf /etc/nsswitch.conf
           --ro-bind-try /etc/ssl/certs /etc/ssl/certs
           --ro-bind-try /etc/static/ssl /etc/static/ssl
           --ro-bind-try /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf
           --ro-bind-try /etc/pki /etc/pki
-          --ro-bind-try /etc/hosts /etc/hosts
-          --ro-bind-try /etc/passwd /etc/passwd
-          --ro-bind-try /etc/group /etc/group
-          --ro-bind-try /etc/nsswitch.conf /etc/nsswitch.conf
           --ro-bind-try /etc/localtime /etc/localtime
           --ro-bind-try /etc/services /etc/services
           --ro-bind-try /etc/resolv.conf /etc/resolv.conf
           --ro-bind-try /usr/bin/env /usr/bin/env
           --ro-bind-try /bin/sh /bin/sh
           --ro-bind-try /run/current-system/sw/share/terminfo /run/current-system/sw/share/terminfo
-          --ro-bind-try /dev/serial /dev/serial
           --bind "$workspace" "$workspace"
         )
 
@@ -404,12 +370,105 @@ in
           --setenv LANG "''${LANG:-C.UTF-8}"
           --setenv TERMINFO_DIRS "/run/current-system/sw/share/terminfo"
           --setenv TMPDIR /tmp
-          --setenv PATH ${dquote pathValue}
+          --setenv PATH ${dquote "${prefixPath}$PATH:${restPath}"}
         )
 
         ${envArgs}
 
-        ${proxySetup}
+        # Preserve the build variables a nix develop shell exports; --clearenv
+        # otherwise drops them and cross/embedded builds fail.
+        for var in \
+          CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH \
+          PKG_CONFIG_PATH CMAKE_PREFIX_PATH \
+          NIX_CFLAGS_COMPILE NIX_LDFLAGS NIX_CC \
+          CC CXX AR RANLIB LD NM STRIP OBJCOPY RUSTFLAGS; do
+          val="''${!var:-}"
+          [ -n "$val" ] && args+=(--setenv "$var" "$val")
+        done
+
+        # Runtime host-loopback ports. The file is read on the host before
+        # bwrap starts; the sandbox only sees the resulting relay sockets.
+        ports_file="$HOME/.config/opencode/sandbox-ports"
+        ports=""
+        ports_seen=0
+        if [ -r "$ports_file" ]; then
+          ports_seen=1
+          while IFS= read -r line; do
+            line="''${line%%#*}"
+            line=$(printf '%s' "$line" | tr -d '[:space:]')
+            case "$line" in
+              ""|*[!0-9]*) continue ;;
+            esac
+            if [ "$line" -ge 1 ] && [ "$line" -le 65535 ] && [ "$line" -ne 3128 ]; then
+              ports="$ports $line"
+            fi
+          done < "$ports_file"
+        fi
+        if [ "$ports_seen" -eq 0 ]; then
+          ports="1883 8883"
+        fi
+        forward_ports=$(printf '%s\n' $ports | sort -nu | tr '\n' ' ')
+        forward_ports="''${forward_ports% }"
+
+        # Squid on a per-launch loopback port.
+        squid_port="''${AI_SANDBOX_PROXY_PORT:-$(( 30000 + RANDOM % 20000 ))}"
+        sed -e "s|__PORT__|$squid_port|g" \
+          -e "s|__RUNDIR__|$runtime|g" \
+          -e "s|__USER__|$(id -un)|g" \
+          ${squidTemplate} > "$runtime/squid.conf"
+        ${squid} -N -f "$runtime/squid.conf" &
+        squid_pid=$!
+        for _ in $(seq 1 100); do
+          if (exec 3<>"/dev/tcp/127.0.0.1/$squid_port") 2>/dev/null; then
+            exec 3>&-
+            break
+          fi
+          sleep 0.1
+        done
+        if ! kill -0 "$squid_pid" 2>/dev/null; then
+          printf 'ai-sandbox: Squid failed to start; see %s\n' "$runtime/cache.log" >&2
+          cat "$runtime/cache.log" >&2 || true
+          exit 1
+        fi
+
+        relay_dir="$runtime/relay"
+        mkdir -p "$relay_dir"
+        chmod 700 "$relay_dir"
+        ${socat} "UNIX-LISTEN:$relay_dir/http.sock,fork,unlink-early,mode=600" \
+          "TCP:127.0.0.1:$squid_port" &
+        relay_pids+=($!)
+
+        for port in $forward_ports; do
+          ${socat} "UNIX-LISTEN:$relay_dir/forward-$port.sock,fork,unlink-early,mode=600" \
+            "TCP:127.0.0.1:$port" &
+          relay_pids+=($!)
+        done
+
+        for sock in "$relay_dir/http.sock" $(
+          for port in $forward_ports; do printf '%s\n' "$relay_dir/forward-$port.sock"; done
+        ); do
+          for _ in $(seq 1 100); do
+            [ -S "$sock" ] && break
+            sleep 0.05
+          done
+          if [ ! -S "$sock" ]; then
+            printf 'ai-sandbox: relay socket %s was not created\n' "$sock" >&2
+            exit 1
+          fi
+        done
+
+        args+=(
+          --ro-bind "$relay_dir" /run/ai-relay
+          --setenv HTTP_PROXY "http://127.0.0.1:3128"
+          --setenv HTTPS_PROXY "http://127.0.0.1:3128"
+          --setenv ALL_PROXY "http://127.0.0.1:3128"
+          --setenv http_proxy "http://127.0.0.1:3128"
+          --setenv https_proxy "http://127.0.0.1:3128"
+          --setenv all_proxy "http://127.0.0.1:3128"
+          --setenv NO_PROXY "localhost,127.0.0.1,::1"
+          --setenv no_proxy "localhost,127.0.0.1,::1"
+          --setenv AI_SANDBOX_FORWARD_PORTS "$forward_ports"
+        )
 
         args+=(--chdir "$workspace")
 

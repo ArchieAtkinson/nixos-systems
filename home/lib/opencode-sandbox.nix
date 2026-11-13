@@ -1,10 +1,8 @@
-# Builds the sandboxed, policy-guarded OpenCode wrapper shared by the global
-# module and per-project dev shells via .mkOpencodeSandbox.
+# Builds the fixed-policy, policy-guarded OpenCode wrapper.
 #
-# The sandbox itself is a small bubblewrap + Squid implementation in
-# ./bwrap-sandbox.nix. `agentSandbox` is accepted as an ignored argument so
-# existing per-project flakes do not break while they drop the input.
-{ pkgs, lib, ... }:
+# The sandbox itself is the bubblewrap + Squid implementation in
+# ./bwrap-sandbox.nix. There are no per-project wrappers or sandbox options.
+{ pkgs, lib }:
 let
   bwrapSandbox = import ./bwrap-sandbox.nix { inherit pkgs lib; };
 
@@ -283,45 +281,24 @@ let
       '';
 in
 {
-  inherit defaultAllowedDomains;
-
   mkOpencodeSandbox =
     {
       pkg,
       pkgBinName ? "opencode",
       outName ? "opencode-sandboxed",
-      policyFile ? "/etc/opencode/opencode.json",
-      goKeyFile ? "/run/secrets/opencode_go_key",
-      configDir ? "$HOME/.config/opencode",
-      dataDir ? "$HOME/.local/share/opencode",
-      stateDir ? "$HOME/.local/state/opencode",
-      cacheDir ? "$HOME/.cache/opencode",
-      extraPackages ? [ ],
-      extraReadOnlyDirs ? [ ],
-      deviceGlobs ? [
-        "/dev/ttyUSB*"
-        "/dev/ttyACM*"
-        "/dev/ttyS*"
-        "/dev/ttyAMA*"
-      ],
-      devShellMode ? "off",
-      allowedDomains ? defaultAllowedDomains,
-      extraDomains ? { },
-      internet ? "restricted",
-      disableProjectConfig ? true,
     }:
     let
-      # bashNorc must win over the host PATH in reduced-nix modes.
-      allPackages = basePackages ++ defaultPackages ++ extraPackages;
+      policyFile = "/etc/opencode/opencode.json";
+      goKeyFile = "/run/secrets/opencode_go_key";
+      configDir = "$HOME/.config/opencode";
+      dataDir = "$HOME/.local/share/opencode";
+      stateDir = "$HOME/.local/state/opencode";
+      cacheDir = "$HOME/.cache/opencode";
+
+      allPackages = basePackages ++ defaultPackages;
 
       sandboxed = bwrapSandbox.mkSandbox {
-        inherit
-          pkg
-          outName
-          internet
-          devShellMode
-          deviceGlobs
-          ;
+        inherit pkg outName;
         binName = pkgBinName;
         allowedPackages = allPackages;
         pathPrefix = [ bashNorc ];
@@ -332,13 +309,14 @@ in
           cacheDir
         ];
 
-        roDirs = [ configDir ] ++ extraReadOnlyDirs;
+        roDirs = [ configDir ];
 
         # Expanded on the host at launch; secrets never enter the store.
         env = {
           OPENCODE_API_KEY = "$(cat ${goKeyFile})";
           OPENCODE_CONFIG_CONTENT = "$(cat ${policyFile})";
           OPENCODE_DISABLE_AUTOUPDATE = "1";
+          OPENCODE_DISABLE_PROJECT_CONFIG = "1";
           UV_CACHE_DIR = "${cacheDir}/uv";
           GIT_CONFIG_NOSYSTEM = "1";
           GIT_CONFIG_GLOBAL = "/dev/null";
@@ -346,12 +324,9 @@ in
           GIT_AUTHOR_EMAIL = "$(git config --global user.email 2>/dev/null || true)";
           GIT_COMMITTER_NAME = "$(git config --global user.name 2>/dev/null || true)";
           GIT_COMMITTER_EMAIL = "$(git config --global user.email 2>/dev/null || true)";
-        }
-        // lib.optionalAttrs disableProjectConfig {
-          OPENCODE_DISABLE_PROJECT_CONFIG = "1";
         };
 
-        allowedDomains = allowedDomains // extraDomains;
+        allowedDomains = defaultAllowedDomains;
       };
 
       # Enforce managed policy + flags; isolation is the bwrap sandbox's job.

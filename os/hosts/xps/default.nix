@@ -21,7 +21,6 @@ in
 
   modules.udev-rules.nrf-ppk = true;
   modules.udev-rules.probe-rs = true;
-  modules.udev-rules.serial-tty = true;
   modules.rtl28xx.enable = true;
 
   networking.hostName = hostname;

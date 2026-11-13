@@ -76,11 +76,6 @@
         };
       };
 
-      # Per-project dev shells: inputs.nixos-systems.lib.mkOpencodeSandbox { ... } { ... }
-      lib = {
-        mkOpencodeSandbox = args: (import ./lib/opencode-sandbox.nix args).mkOpencodeSandbox;
-        defaultAllowedDomains = args: (import ./lib/opencode-sandbox.nix args).defaultAllowedDomains;
-      };
     };
 
 }

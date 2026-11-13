@@ -88,13 +88,15 @@ in
       ];
 
       baselineClosure = pkgs.closureInfo {
-        rootPaths = [ pkg ] ++ allowedPackages ++ pathPrefix ++ sandboxTools;
+        rootPaths = [
+          pkg
+          relay
+        ] ++ allowedPackages ++ pathPrefix ++ sandboxTools;
       };
 
       prefixPath = lib.optionalString (pathPrefix != [ ]) "${lib.makeBinPath pathPrefix}:";
       restPath = lib.makeBinPath allowedPackages;
 
-      bash = "${pkgs.bashInteractive}/bin/bash";
       bwrap = "${pkgs.bubblewrap}/bin/bwrap";
       socat = "${pkgs.socat}/bin/socat";
       squid = "${pkgs.squid}/bin/squid";
@@ -102,9 +104,9 @@ in
 
       deviceArgs = ''
         for pattern in /dev/ttyUSB* /dev/ttyACM* /dev/ttyS* /dev/ttyAMA*; do
-          while IFS= read -r dev; do
-            [ -n "$dev" ] && args+=(--dev-bind-try "$dev" "$dev")
-          done < <(compgen -G "$pattern" || true)
+          for dev in $pattern; do
+            [ -e "$dev" ] && args+=(--dev-bind-try "$dev" "$dev")
+          done
         done
         args+=(--dev-bind-try /dev/bus/usb /dev/bus/usb)
         args+=(--ro-bind-try /dev/serial /dev/serial)
@@ -161,13 +163,10 @@ in
         exec "$@"
       '';
 
-      app = [
-        bash
-        "-c"
-        relayScript
-        "ai-sandbox"
-        (lib.getExe' pkg binName)
-      ];
+      # The in-sandbox entry point: bring up the loopback relays, then exec the
+      # wrapped program. Written as its own script so the launcher can pass it
+      # as a single argv element without shell quoting in the array.
+      relay = pkgs.writeShellScript "ai-sandbox-relay" relayScript;
 
       script = ''
         set -euo pipefail
@@ -514,6 +513,11 @@ in
         )
 
         args+=(--chdir "$workspace")
+
+        app=(
+          ${relay}
+          ${dquote (lib.getExe' pkg binName)}
+        )
 
         status=0
         ${bwrap} "''${args[@]}" -- "''${app[@]}" "$@" || status=$?

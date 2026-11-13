@@ -313,7 +313,6 @@ in
 
         # Expanded on the host at launch; secrets never enter the store.
         env = {
-          OPENCODE_API_KEY = "$(cat ${goKeyFile})";
           OPENCODE_CONFIG_CONTENT = "$(cat ${policyFile})";
           OPENCODE_DISABLE_AUTOUPDATE = "1";
           OPENCODE_DISABLE_PROJECT_CONFIG = "1";
@@ -324,6 +323,12 @@ in
           GIT_AUTHOR_EMAIL = "$(git config --global user.email 2>/dev/null || true)";
           GIT_COMMITTER_NAME = "$(git config --global user.name 2>/dev/null || true)";
           GIT_COMMITTER_EMAIL = "$(git config --global user.email 2>/dev/null || true)";
+        };
+
+        # Bound through a file and exported by the relay, so the key does not
+        # appear in bwrap's argv (/proc/1/cmdline).
+        secrets = {
+          OPENCODE_API_KEY = goKeyFile;
         };
 
         allowedDomains = defaultAllowedDomains;

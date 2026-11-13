@@ -78,6 +78,10 @@ in
       rwDirs ? [ ],
       roDirs ? [ ],
       env ? { },
+      # envVar -> host file. The value is read on the host at launch, bound
+      # read-only into the sandbox, and exported by the relay, so it never
+      # appears in bwrap's argv (/proc/1/cmdline).
+      secrets ? { },
       allowedDomains ? { },
     }:
     let
@@ -139,8 +143,25 @@ in
         '') env
       );
 
+      secretArgs = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (var: path: ''
+          secret=${dquote path}
+          if [ ! -r "$secret" ]; then
+            printf 'ai-sandbox: secret %s is missing or unreadable; refusing to launch\n' "$secret" >&2
+            exit 1
+          fi
+          install -m 0600 "$secret" "$runtime/secret-${var}"
+          args+=(--ro-bind "$runtime/secret-${var}" "/run/ai-secrets/${var}")
+        '') secrets
+      );
+
+      secretExports = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (var: _: "export ${var}=\"$(cat /run/ai-secrets/${var})\"") secrets
+      );
+
       relayScript = ''
         set -e
+        ${secretExports}
         ${socat} TCP-LISTEN:3128,bind=127.0.0.1,reuseaddr,fork \
           UNIX-CONNECT:/run/ai-relay/http.sock &
         for port in $AI_SANDBOX_FORWARD_PORTS; do
@@ -217,6 +238,7 @@ in
           --dir /var/tmp
           --dir /home
           --dir /run
+          --dir /run/ai-secrets
           --dir /usr
           --dir /usr/bin
           --dir /bin
@@ -229,6 +251,7 @@ in
           --perms 1777 --tmpfs /var/tmp
           --tmpfs /home
           --dir "$HOME"
+          --bind "$workspace" "$workspace"
           --clearenv
           --hostname sandbox
           --die-with-parent
@@ -257,9 +280,10 @@ in
               dirname "$entry"
               ;;
             /run/current-system/sw/bin)
-              for link in "$entry"/*; do
-                [ -e "$link" ] || continue
-                target=$(readlink -f "$link" 2>/dev/null || true)
+              # One readlink for every entry: per-link calls dominate launch
+              # time (~1100 forks).
+              targets=$(readlink -f "$entry"/* 2>/dev/null || true)
+              printf '%s\n' "$targets" | while IFS= read -r target; do
                 case "$target" in
                   /nix/store/*) printf '%s\n' "$target" ;;
                 esac
@@ -360,7 +384,6 @@ in
           --ro-bind-try /usr/bin/env /usr/bin/env
           --ro-bind-try /bin/sh /bin/sh
           --ro-bind-try /run/current-system/sw/share/terminfo /run/current-system/sw/share/terminfo
-          --bind "$workspace" "$workspace"
         )
 
         ${roArgs}
@@ -379,6 +402,7 @@ in
         )
 
         ${envArgs}
+        ${secretArgs}
 
         # Preserve the build variables a nix develop shell exports; --clearenv
         # otherwise drops them and cross/embedded builds fail.

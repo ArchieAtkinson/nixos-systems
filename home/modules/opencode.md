@@ -42,8 +42,12 @@ adds the managed-policy guard and the OpenCode-specific environment.
 - **Hotplug** — not supported. A device plugged in after launch requires
   restarting the sandbox. There is no udev inside the sandbox, so libudev
   hotplug events do not work.
-- **Secrets** — the API key is injected from sops into the environment at
-  launch, never into the store. Policy denies env/secret reads and
+- **Secrets** — the API key is copied from sops into a launch-time file
+  (mode 0600, inside the per-launch runtime dir), bound read-only into the
+  sandbox, and exported by the relay before OpenCode starts, so it never
+  enters the store or bwrap's argv (`/proc/1/cmdline`). The agent can still
+  read it from `$OPENCODE_API_KEY` or from `/run/ai-secrets`; that is the
+  documented trade-off. Policy denies env/secret reads and
   `external_directory`.
 - **Policy** — shell, search, and fetch run without prompting; the sandbox view
   and egress relay are the controls. The provider is pinned to `opencode-go`.

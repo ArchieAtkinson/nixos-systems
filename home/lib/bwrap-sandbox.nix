@@ -37,18 +37,17 @@ let
       lib.mapAttrsToList (
         domain: methods:
         let
-          d = lib.removePrefix "*." domain;
-          acl = aclName d;
+          acl = aclName domain;
           methodList = if isList methods then methods else [ methods ];
         in
         if methods == "*" || methodList == [ ] then
           ''
-            acl ${acl} dstdomain .${d}
+            acl ${acl} dstdomain .${domain}
             http_access allow ${acl}
           ''
         else
           ''
-            acl ${acl} dstdomain .${d}
+            acl ${acl} dstdomain .${domain}
             acl m_${acl} method ${lib.concatStringsSep " " methodList}
             http_access allow CONNECT ${acl}
             http_access allow ${acl} m_${acl}
@@ -71,8 +70,6 @@ in
   mkSandbox =
     {
       pkg,
-      binName ? "opencode",
-      outName ? "opencode-sandboxed",
       allowedPackages ? [ ],
       pathPrefix ? [ ],
       rwDirs ? [ ],
@@ -86,7 +83,6 @@ in
     }:
     let
       sandboxTools = with pkgs; [
-        bashInteractive
         cacert
         socat
       ];
@@ -123,12 +119,13 @@ in
           exit 1
         fi
         args+=(--ro-bind "$dir" "$dir")
-        while IFS= read -r link; do
-          target=$(readlink -f "$link" 2>/dev/null || true)
+        # Symlinks (home-manager files) may point into the store; bind their
+        # targets so they resolve inside the sandbox. One readlink per batch.
+        while IFS= read -r target; do
           case "$target" in
             /nix/store/*) args+=(--ro-bind "$target" "$target") ;;
           esac
-        done < <(find "$dir" -type l 2>/dev/null || true)
+        done < <(find "$dir" -type l -exec readlink -f {} + 2>/dev/null || true)
       '') roDirs;
 
       rwArgs = lib.concatMapStringsSep "\n" (dir: ''
@@ -202,7 +199,6 @@ in
             pkgs.gnugrep
             pkgs.findutils
             pkgs.gitMinimal
-            pkgs.bashInteractive
           ]
         }:$PATH"
 
@@ -540,7 +536,7 @@ in
 
         app=(
           ${relay}
-          ${dquote (lib.getExe' pkg binName)}
+          ${dquote (lib.getExe' pkg "opencode")}
         )
 
         status=0
@@ -548,5 +544,5 @@ in
         exit "$status"
       '';
     in
-    pkgs.writeShellScriptBin outName script;
+    pkgs.writeShellScriptBin "opencode-sandboxed" script;
 }

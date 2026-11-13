@@ -284,8 +284,6 @@ in
   mkOpencodeSandbox =
     {
       pkg,
-      pkgBinName ? "opencode",
-      outName ? "opencode-sandboxed",
     }:
     let
       policyFile = "/etc/opencode/opencode.json";
@@ -298,8 +296,7 @@ in
       allPackages = basePackages ++ defaultPackages;
 
       sandboxed = bwrapSandbox.mkSandbox {
-        inherit pkg outName;
-        binName = pkgBinName;
+        inherit pkg;
         allowedPackages = allPackages;
         pathPrefix = [ bashNorc ];
 
@@ -423,12 +420,12 @@ in
             command_args+=(--standalone)
           fi
 
-          exec ${lib.getExe' sandboxed outName} "''${command_args[@]}"
+          exec ${lib.getExe' sandboxed "opencode-sandboxed"} "''${command_args[@]}"
         '';
       };
 
       # expose only the sandboxed entrypoint (unwrapped via passthru.unwrapped).
-      wrapped = pkgs.runCommand outName { passthru.unwrapped = pkg; } ''
+      wrapped = pkgs.runCommand "opencode-sandboxed" { passthru.unwrapped = pkg; } ''
         mkdir -p $out/bin
         ln -s ${lib.getExe guarded} $out/bin/opencode
       '';

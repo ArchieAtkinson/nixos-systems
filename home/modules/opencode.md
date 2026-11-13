@@ -26,7 +26,8 @@ adds the managed-policy guard and the OpenCode-specific environment.
   through a per-launch Squid over a Unix-socket relay. The domain allowlist is
   the curated set in `home/lib/opencode-sandbox.nix`; anything not listed is
   blocked. HTTPS is tunnelled with `CONNECT`, not intercepted, so method lists
-  are enforced only for plain HTTP.
+  are enforced only for plain HTTP. Name resolution happens in Squid on the
+  host; a DNS lookup attempted inside the sandbox fails immediately.
 - **Host ports** — the sandbox can reach explicitly configured host-loopback
   TCP ports through the same relay mechanism. The list is read at launch from
   `~/.config/opencode/sandbox-ports`; the file is not writable by the agent.
@@ -79,7 +80,9 @@ Example `~/.config/opencode/sandbox-ports`:
 
 The file is read on the host before bwrap starts. Only `127.0.0.1:<port>` is
 reachable; there is no general LAN access. The sandbox sees the ports on its
-own loopback.
+own loopback. One port per line (whitespace-separated entries also work);
+entries that are non-numeric, out of range, or `3128` are ignored with a
+warning.
 
 For an ESP32 with Ethernet and USB serial:
 

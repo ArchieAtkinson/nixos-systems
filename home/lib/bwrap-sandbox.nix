@@ -277,8 +277,11 @@ in
         : > "$closure_file"
         if [ -n "$nix_store" ] && [ -s "$roots" ]; then
           mapfile -t roots_arr < "$roots"
-          "$nix_store" --query --requisites "''${roots_arr[@]}" \
-            | sort -u > "$closure_file" || true
+          if ! "$nix_store" --query --requisites "''${roots_arr[@]}" \
+            | sort -u > "$closure_file"; then
+            printf 'ai-sandbox: nix-store --query --requisites failed; refusing to launch with a partial PATH closure\n' >&2
+            exit 1
+          fi
         else
           cp "$roots" "$closure_file" 2>/dev/null || true
         fi
@@ -336,12 +339,16 @@ in
         printf '%s:x:%s:%s::%s:/bin/sh\n' "$user" "$uid" "$gid" "$HOME" > "$runtime/passwd"
         printf '%s:x:%s:\n' "$user" "$gid" > "$runtime/group"
         printf '127.0.0.1 localhost\n::1 localhost\n' > "$runtime/hosts"
+        # Nothing in the sandbox can reach the host resolver (private netns), so
+        # fail lookups immediately instead of waiting on an unreachable stub.
+        printf 'nameserver 127.0.0.1\noptions timeout:1 attempts:1\n' > "$runtime/resolv.conf"
         : > "$runtime/empty"
 
         args+=(
           --ro-bind "$runtime/passwd" /etc/passwd
           --ro-bind "$runtime/group" /etc/group
           --ro-bind "$runtime/hosts" /etc/hosts
+          --ro-bind "$runtime/resolv.conf" /etc/resolv.conf
           --ro-bind "$runtime/empty" /proc/cmdline
           --ro-bind "$runtime/empty" /proc/sys/kernel/random/boot_id
           --ro-bind-try /etc/nsswitch.conf /etc/nsswitch.conf
@@ -351,7 +358,6 @@ in
           --ro-bind-try /etc/pki /etc/pki
           --ro-bind-try /etc/localtime /etc/localtime
           --ro-bind-try /etc/services /etc/services
-          --ro-bind-try /etc/resolv.conf /etc/resolv.conf
           --ro-bind-try /usr/bin/env /usr/bin/env
           --ro-bind-try /bin/sh /bin/sh
           --ro-bind-try /run/current-system/sw/share/terminfo /run/current-system/sw/share/terminfo
@@ -395,13 +401,19 @@ in
           ports_seen=1
           while IFS= read -r line; do
             line="''${line%%#*}"
-            line=$(printf '%s' "$line" | tr -d '[:space:]')
-            case "$line" in
-              ""|*[!0-9]*) continue ;;
-            esac
-            if [ "$line" -ge 1 ] && [ "$line" -le 65535 ] && [ "$line" -ne 3128 ]; then
-              ports="$ports $line"
-            fi
+            for token in $line; do
+              case "$token" in
+                *[!0-9]*)
+                  printf 'ai-sandbox: ignoring non-numeric port %s in %s\n' "$token" "$ports_file" >&2
+                  continue
+                  ;;
+              esac
+              if [ "$token" -ge 1 ] && [ "$token" -le 65535 ] && [ "$token" -ne 3128 ]; then
+                ports="$ports $token"
+              else
+                printf 'ai-sandbox: ignoring reserved or out-of-range port %s in %s\n' "$token" "$ports_file" >&2
+              fi
+            done
           done < "$ports_file"
         fi
         if [ "$ports_seen" -eq 0 ]; then
@@ -410,23 +422,54 @@ in
         forward_ports=$(printf '%s\n' $ports | sort -nu | tr '\n' ' ')
         forward_ports="''${forward_ports% }"
 
-        # Squid on a per-launch loopback port.
-        squid_port="''${AI_SANDBOX_PROXY_PORT:-$(( 30000 + RANDOM % 20000 ))}"
-        sed -e "s|__PORT__|$squid_port|g" \
-          -e "s|__RUNDIR__|$runtime|g" \
-          -e "s|__USER__|$(id -un)|g" \
-          ${squidTemplate} > "$runtime/squid.conf"
-        ${squid} -N -f "$runtime/squid.conf" &
-        squid_pid=$!
-        for _ in $(seq 1 100); do
-          if (exec 3<>"/dev/tcp/127.0.0.1/$squid_port") 2>/dev/null; then
-            exec 3>&-
+        # Squid on a per-launch loopback port. The candidate must not collide
+        # with a forwarded port or a host service, so retry a few ports.
+        squid_started=0
+        squid_port=""
+        for _attempt in $(seq 1 10); do
+          if [ -n "''${AI_SANDBOX_PROXY_PORT:-}" ]; then
+            squid_port="$AI_SANDBOX_PROXY_PORT"
+          else
+            squid_port=$(( 30000 + RANDOM % 20000 ))
+          fi
+          case " $forward_ports " in
+            *" $squid_port "*)
+              if [ -n "''${AI_SANDBOX_PROXY_PORT:-}" ]; then
+                printf 'ai-sandbox: AI_SANDBOX_PROXY_PORT %s collides with a forwarded port\n' "$squid_port" >&2
+                exit 1
+              fi
+              continue
+              ;;
+          esac
+          sed -e "s|__PORT__|$squid_port|g" \
+            -e "s|__RUNDIR__|$runtime|g" \
+            -e "s|__USER__|$(id -un)|g" \
+            ${squidTemplate} > "$runtime/squid.conf"
+          ${squid} -N -f "$runtime/squid.conf" &
+          squid_pid=$!
+          listening=0
+          for _ in $(seq 1 100); do
+            if (exec 3<>"/dev/tcp/127.0.0.1/$squid_port") 2>/dev/null; then
+              exec 3>&-
+              listening=1
+              break
+            fi
+            kill -0 "$squid_pid" 2>/dev/null || break
+            sleep 0.1
+          done
+          if [ "$listening" -eq 1 ] && kill -0 "$squid_pid" 2>/dev/null; then
+            squid_started=1
             break
           fi
-          sleep 0.1
+          kill "$squid_pid" 2>/dev/null || true
+          wait "$squid_pid" 2>/dev/null || true
+          squid_pid=""
+          # An explicit port is honoured or the launch fails; never silently
+          # substitute a different one.
+          [ -n "''${AI_SANDBOX_PROXY_PORT:-}" ] && break
         done
-        if ! kill -0 "$squid_pid" 2>/dev/null; then
-          printf 'ai-sandbox: Squid failed to start; see %s\n' "$runtime/cache.log" >&2
+        if [ "$squid_started" -ne 1 ]; then
+          printf 'ai-sandbox: Squid failed to start on port %s; see %s\n' "$squid_port" "$runtime/cache.log" >&2
           cat "$runtime/cache.log" >&2 || true
           exit 1
         fi

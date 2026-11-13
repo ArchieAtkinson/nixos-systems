@@ -260,8 +260,26 @@ in
           --unshare-net
         )
 
+        # Bind each store path once. The baseline closure and the PATH closure
+        # overlap heavily, and every duplicate is another mount(2) on the
+        # critical path of the launch.
+        declare -A bound_store=()
+        store_binds=0
+        store_dupes=0
+        bind_store() {
+          local path=$1
+          [ -n "$path" ] || return 0
+          if [ -n "''${bound_store[$path]:-}" ]; then
+            store_dupes=$(( store_dupes + 1 ))
+            return 0
+          fi
+          bound_store[$path]=1
+          store_binds=$(( store_binds + 1 ))
+          args+=(--ro-bind "$path" "$path")
+        }
+
         while IFS= read -r p; do
-          [ -n "$p" ] && args+=(--ro-bind "$p" "$p")
+          bind_store "$p"
         done < ${baselineClosure}/store-paths
 
         # Closure of the current PATH: nix develop tools and NixOS default
@@ -306,7 +324,7 @@ in
         fi
 
         while IFS= read -r p; do
-          [ -n "$p" ] && args+=(--ro-bind "$p" "$p")
+          bind_store "$p"
         done < "$closure_file"
 
         args+=(--ro-bind-try /run/current-system/sw/bin /run/current-system/sw/bin)
@@ -538,6 +556,11 @@ in
           ${relay}
           ${dquote (lib.getExe' pkg "opencode")}
         )
+
+        if [ -n "''${OPENCODE_SANDBOX_DEBUG:-}" ]; then
+          printf 'ai-sandbox: %s bwrap args, %s store binds, %s duplicates skipped\n' \
+            "''${#args[@]}" "$store_binds" "$store_dupes" >&2
+        fi
 
         status=0
         ${bwrap} "''${args[@]}" -- "''${app[@]}" "$@" || status=$?

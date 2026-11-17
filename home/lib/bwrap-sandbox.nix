@@ -433,9 +433,7 @@ in
         # bwrap starts; the sandbox only sees the resulting relay sockets.
         ports_file="$HOME/.config/opencode/sandbox-ports"
         ports=""
-        ports_seen=0
         if [ -r "$ports_file" ]; then
-          ports_seen=1
           while IFS= read -r line; do
             line="''${line%%#*}"
             for token in $line; do
@@ -452,9 +450,6 @@ in
               fi
             done
           done < "$ports_file"
-        fi
-        if [ "$ports_seen" -eq 0 ]; then
-          ports="1883 8883"
         fi
         forward_ports=$(printf '%s\n' $ports | sort -nu | tr '\n' ' ')
         forward_ports="''${forward_ports% }"

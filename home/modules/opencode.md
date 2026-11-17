@@ -31,8 +31,8 @@ adds the managed-policy guard and the OpenCode-specific environment.
 - **Host ports** — the sandbox can reach explicitly configured host-loopback
   TCP ports through the same relay mechanism. The list is read at launch from
   `~/.config/opencode/sandbox-ports`; the file is not writable by the agent.
-  If the file is absent, `1883` and `8883` (MQTT) are forwarded. The host target
-  is always `127.0.0.1:<port>`.
+  If the file is missing or empty, no host ports are forwarded. The host
+  target is always `127.0.0.1:<port>`.
 - **Devices** — every USB and serial node present at launch is visible:
   `/dev/bus/usb`, `/dev/serial`, `/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/ttyS*`,
   and `/dev/ttyAMA*`. `/sys` is mounted read-only so libusb can enumerate USB

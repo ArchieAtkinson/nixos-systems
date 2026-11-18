@@ -1,4 +1,9 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  inputs,
+  lib,
+  ...
+}:
 {
   home.username = "archie";
   home.homeDirectory = "/home/archie";
@@ -15,13 +20,14 @@
     enable = true;
     clients = [
       {
-        position = "left";
-        hostname = "framework";
+        position = "top";
+        hostname = "xps";
       }
     ];
   };
 
   home.packages = with pkgs; [
+    inputs.handy.packages.${pkgs.stdenv.hostPlatform.system}.default
     usbutils
     bluetui
     xournalpp

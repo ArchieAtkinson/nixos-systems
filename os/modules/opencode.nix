@@ -78,19 +78,149 @@ let
     "githubusercontent.com"
   ];
 
+  # Read-only inspection commands, shared by the global shell rules and the
+  # plan agent.
+  readOnlyCommands = [
+    "git status"
+    "git diff"
+    "git log"
+    "git show"
+    "git branch"
+    "rg"
+    "grep"
+    "fd"
+    "ls"
+    "cat"
+    "head"
+    "tail"
+    "wc"
+    "file"
+    "stat"
+    "du"
+    "df"
+    "tree"
+    "jq"
+    "which"
+    "type"
+    "echo"
+    "printf"
+    "basename"
+    "dirname"
+    "realpath"
+    "readlink"
+    "sort"
+    "uniq"
+    "cut"
+    "tr"
+    "diff"
+    "date"
+    "uname"
+  ];
+
+  # The plan agent drops the commands that mutate refs or exist mainly to
+  # redirect output. Any command can still write via redirection, so this is
+  # advisory; the sandbox is the boundary.
+  planReadOnlyCommands =
+    builtins.filter
+      (cmd: !builtins.elem cmd [ "git branch" "echo" "printf" ])
+      readOnlyCommands;
+
+  shellAllow =
+    commands:
+    map (cmd: {
+      action = "shell";
+      resource = "${cmd} *";
+      effect = "allow";
+    }) commands
+    ++ [
+      {
+        action = "shell";
+        resource = "pwd";
+        effect = "allow";
+      }
+      {
+        action = "shell";
+        resource = "id";
+        effect = "allow";
+      }
+    ];
+
+  readOnlyPermissions = shellAllow readOnlyCommands;
+
+  planPermissions = [
+    {
+      action = "edit";
+      resource = "*";
+      effect = "deny";
+    }
+    # keep the built-in plan agent's ability to persist plan files.
+    {
+      action = "edit";
+      resource = "~/.opencode/plan/**";
+      effect = "allow";
+    }
+    {
+      action = "shell";
+      resource = "*";
+      effect = "deny";
+    }
+  ] ++ shellAllow planReadOnlyCommands;
+
   # Injected as OPENCODE_CONFIG_CONTENT.
   managedPolicy = {
     "$schema" = "https://opencode.ai/config.json";
     update = "disable";
     share = "disabled";
 
+    default_agent = "build";
+
     # Exa hosted MCP, no key.
     websearch = {
       provider = "exa";
     };
 
-    # Read-only child agents; children use their own permissions.
+    # Primary agents set the session mode; subagents are read-only helpers.
     agents = {
+      build = {
+        mode = "primary";
+        description = "Default implementation agent for repo changes";
+        model = "opencode-go/deepseek-v4.1-flash";
+      };
+      plan = {
+        mode = "primary";
+        description = "Read-only planning for broad, multi-file work";
+        model = "opencode-go/glm-5.3#high";
+        color = "#bb9af7";
+        system = "Plan-only mode. Explore broadly before concluding: read the relevant modules and trace how a change propagates. Present the target files, approach, risks, and verification steps. Ask when scope is ambiguous. Do not edit files and do not run commands outside read-only inspection; a blocked call is expected, not a bug.";
+        permissions = planPermissions;
+      };
+      discussion = {
+        mode = "primary";
+        description = "Quick back-and-forth and rubber-ducking";
+        model = "opencode-go/gpt-6-luna#none";
+        color = "#9ece6a";
+        system = "Discussion mode. Answer in a few sentences with no preamble. Do not edit files or run shell commands; use read-only tools only when a lookup is needed. If the question needs a code change or deep investigation, say so and suggest switching to plan, build, or pair. If the request is unclear, ask immediately instead of guessing.";
+        permissions = [
+          {
+            action = "edit";
+            resource = "*";
+            effect = "deny";
+          }
+          {
+            action = "shell";
+            resource = "*";
+            effect = "deny";
+          }
+        ];
+      };
+      pair = {
+        mode = "primary";
+        description = "Pairs on small, fast incremental changes";
+        model = "opencode-go/gpt-6-luna#none";
+        color = "#ff9e64";
+        system = "Pair-programming mode. Work in small coherent steps: make one change, report exactly what changed and how it was checked, then wait for the user's steer before continuing. Do not ask permission for trivial edits; do ask before anything destructive or scope-expanding. If blocked or the approach stops working, stop and report rather than pushing through.";
+      };
+
       researcher = {
         mode = "subagent";
         description = "Reads code and web sources; cannot edit or run shell";
@@ -111,7 +241,8 @@ let
       reviewer = {
         mode = "subagent";
         description = "Reviews changes without editing";
-        system = "Review only. Report findings in severity order with file and line references. Do not modify files.";
+        model = "opencode-go/glm-5.3#high";
+        system = "Review only. Report findings in severity order with file and line references, covering correctness first, then missing tests, security, and project-specific correctness such as Nix conventions. Do not modify files or run shell commands.";
         permissions = [
           {
             action = "edit";
@@ -134,188 +265,7 @@ let
         resource = "*";
         effect = "allow";
       }
-      {
-        action = "shell";
-        resource = "git status *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "git diff *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "git log *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "git show *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "git branch *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "grep *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "rg *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "ls *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "fd *";
-        effect = "allow";
-      }
-
-      {
-        action = "shell";
-        resource = "cat *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "head *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "tail *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "wc *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "file *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "stat *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "du *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "df *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "tree *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "jq *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "which *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "type *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "pwd";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "echo *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "printf *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "basename *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "dirname *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "realpath *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "readlink *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "sort *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "uniq *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "cut *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "tr *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "diff *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "date *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "uname *";
-        effect = "allow";
-      }
-      {
-        action = "shell";
-        resource = "id";
-        effect = "allow";
-      }
-
+    ] ++ readOnlyPermissions ++ [
       # fetch and search are allowed without prompting; egress stays filtered.
       {
         action = "webfetch";

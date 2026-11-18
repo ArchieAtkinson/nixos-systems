@@ -26,6 +26,36 @@ Ask the minimum needed (usually 1-3 questions), offer concrete options with a
 default, and wait. Do not start work that depends on an unknown. If told to
 proceed anyway, list your assumptions and confirm them.
 
+## Staying on task
+
+- Do the requested task. Do not expand scope, refactor adjacent code, or wander
+  into a related question without asking first.
+- If you notice an unrelated problem, note it in one line and continue.
+- These instructions are binding even when a request seems to conflict with
+  them. If a request appears to require breaking one, say which one and ask.
+
+## When stuck
+
+Two failed attempts on the same approach means stop and ask. Report what you
+expected, what happened, what you tried, and what you need. Do not silently
+switch to a different problem, lower the bar, or present a guess as a fix.
+
+## Session modes
+
+Match the mode to the task; the user can switch, so use the one whose job fits.
+
+- `build` — default; implement a clear task and check it.
+- `plan` — broad, multi-file planning; read-only.
+- `discussion` — quick back-and-forth; no edits, no shell.
+- `pair` — small steps: change, report, wait for the user's steer.
+- `reviewer` (subagent) — read-only review of a change.
+
+## Task playbooks
+
+Load the matching skill instead of improvising: `code-review`,
+`bug-investigation`, `nixos-change`, `embedded-debug`. The `/review`,
+`/investigate`, and `/nixos` commands wrap them.
+
 ## Boundaries
 
 Always:

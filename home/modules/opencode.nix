@@ -46,7 +46,25 @@ in
     '';
 
     # advisory only; the sandbox is the boundary.
-    xdg.configFile."opencode/AGENTS.md".source = ./opencode-AGENTS.md;
+    xdg.configFile = {
+      "opencode/AGENTS.md".source = ./opencode-AGENTS.md;
+
+      # task playbooks; the model loads one when a task matches.
+      "opencode/skills/code-review/SKILL.md".source =
+        ./opencode-skills/code-review/SKILL.md;
+      "opencode/skills/bug-investigation/SKILL.md".source =
+        ./opencode-skills/bug-investigation/SKILL.md;
+      "opencode/skills/nixos-change/SKILL.md".source =
+        ./opencode-skills/nixos-change/SKILL.md;
+      "opencode/skills/embedded-debug/SKILL.md".source =
+        ./opencode-skills/embedded-debug/SKILL.md;
+
+      # reusable invocations for the common workflows.
+      "opencode/commands/review.md".source = ./opencode-commands/review.md;
+      "opencode/commands/investigate.md".source =
+        ./opencode-commands/investigate.md;
+      "opencode/commands/nixos.md".source = ./opencode-commands/nixos.md;
+    };
 
     home.packages = [ wrapped ];
   };

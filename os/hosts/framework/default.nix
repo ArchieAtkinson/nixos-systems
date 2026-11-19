@@ -51,7 +51,6 @@ in
   modules.vpn.proton-vpn = true;
   modules.locale.GB = true;
   modules.syncthing.enable = true;
-  modules.opencode.enable = true;
 
   programs.niri.package = inputs.biri.packages.${pkgs.stdenv.hostPlatform.system}.niri;
 

@@ -1,6 +1,6 @@
 # OpenCode sandbox
 
-OpenCode runs in a fixed-policy bubblewrap sandbox under a root-owned managed
+OpenCode runs in a fixed-policy bubblewrap sandbox under a home-managed
 policy. The filesystem view and the egress relay are the boundary; the policy
 shapes behaviour, it is not the boundary.
 
@@ -8,8 +8,11 @@ The policy is intentionally not configurable. This is a single-user,
 trusted-hardware embedded development machine. There are no per-project
 wrappers and no sandbox knobs.
 
-The builder is `home/lib/bwrap-sandbox.nix`; `home/lib/opencode-sandbox.nix`
-adds the managed-policy guard and the OpenCode-specific environment.
+The policy lives in `home/lib/opencode-policy.nix`, is written to
+`~/.config/opencode/opencode.json`, and is injected as
+`OPENCODE_CONFIG_CONTENT`. The builder is `home/lib/bwrap-sandbox.nix`;
+`home/lib/opencode-sandbox.nix` adds the policy guard and the OpenCode-specific
+environment.
 
 ## Hardening
 

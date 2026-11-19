@@ -5,8 +5,9 @@ description: Make a scoped NixOS or Home Manager change in this repository
 
 # NixOS change
 
-`os/` is the NixOS configuration (system, root-owned policy). `home/` is the
-Home Manager configuration (user packages, dotfiles, wrappers).
+`os/` is the NixOS configuration (system, secrets, udev). `home/` is the
+Home Manager configuration (user packages, dotfiles, wrappers, and the OpenCode
+policy).
 
 ## Workflow
 

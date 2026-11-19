@@ -45,7 +45,8 @@ switch to a different problem, lower the bar, or present a guess as a fix.
 Match the mode to the task; the user can switch, so use the one whose job fits.
 
 - `build` — default; implement a clear task and check it.
-- `plan` — broad, multi-file planning; read-only.
+- `plan` — broad, multi-file planning; no edits, but shell is allowed for
+  inspection and verification.
 - `discussion` — quick back-and-forth; no edits, no shell.
 - `pair` — small steps: change, report, wait for the user's steer.
 - `reviewer` (subagent) — read-only review of a change.
@@ -116,6 +117,21 @@ cannot widen it.
 
 Give a subagent complete context and a precise prompt. Only these three are
 available, and subagents cannot launch further subagents.
+
+## Worktrees
+
+Use a linked worktree when work should not disturb the main checkout.
+
+- Create it inside the repo at `.worktree/<name>`, which is gitignored:
+  `git worktree add .worktree/<name> -b <branch>`
+- Keep worktrees inside the repo. Only the workspace and the repo's git dirs are
+  mounted; a worktree anywhere else is unreachable.
+- Work in it by launching OpenCode from the worktree directory. The shared git
+  dir stays writable, so commits and object writes behave normally.
+- Remove it with `git worktree remove .worktree/<name>`; prune stale entries
+  with `git worktree prune`.
+- `.git/hooks`, `.git/config`, and `objects/info/alternates` stay read-only;
+  never try to change them.
 
 ## Missing or blocked resources
 
@@ -210,4 +226,6 @@ Prefer the dedicated tools over shell improvisation:
 - Prefer read-only inspection (`git status/diff/log/show`, `ls`, `cat`, `grep`,
   `rg`, `fd`). Shell runs without prompting, so keep commands deliberate.
 - Commit to the current branch only; do not push unless asked.
+- Use a linked worktree under `.worktree/` (see above) for parallel or risky
+  work instead of switching branches in place.
 - Git identity is provided from the host; do not change git config.

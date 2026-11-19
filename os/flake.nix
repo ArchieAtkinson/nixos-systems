@@ -41,7 +41,6 @@
             ./modules/lid-management.nix
             ./modules/udev-rules.nix
             ./modules/rtl28xx.nix
-            ./modules/opencode.nix
           ];
         };
 

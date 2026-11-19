@@ -284,10 +284,10 @@ in
   mkOpencodeSandbox =
     {
       pkg,
+      policyFile,
+      keyFile,
     }:
     let
-      policyFile = "/etc/opencode/opencode.json";
-      goKeyFile = "/run/secrets/opencode_go_key";
       configDir = "$HOME/.config/opencode";
       dataDir = "$HOME/.local/share/opencode";
       stateDir = "$HOME/.local/state/opencode";
@@ -325,7 +325,7 @@ in
         # Bound through a file and exported by the relay, so the key does not
         # appear in bwrap's argv (/proc/1/cmdline).
         secrets = {
-          OPENCODE_API_KEY = goKeyFile;
+          OPENCODE_API_KEY = keyFile;
         };
 
         allowedDomains = defaultAllowedDomains;
@@ -342,11 +342,11 @@ in
         text = ''
           # fail closed if policy or key is missing.
           if [ ! -f ${policyFile} ]; then
-            printf 'opencode-sandbox: managed policy %s is missing; run os switch first\n' ${policyFile} >&2
+            printf 'opencode-sandbox: managed policy %s is missing; run home-manager switch first\n' ${policyFile} >&2
             exit 1
           fi
-          if [ ! -f ${goKeyFile} ]; then
-            printf 'opencode-sandbox: Go API key %s is missing; run os switch first\n' ${goKeyFile} >&2
+          if [ ! -f ${keyFile} ]; then
+            printf 'opencode-sandbox: Go API key %s is missing; run os switch first\n' ${keyFile} >&2
             exit 1
           fi
 

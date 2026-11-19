@@ -22,5 +22,9 @@ in
     sops.secrets.vpn_ca = { };
     sops.secrets."syncthing_key_${hostname}" = { };
     sops.secrets."syncthing_cert_${hostname}" = { };
+    sops.secrets.opencode_go_key = {
+      owner = "archie";
+      mode = "0400";
+    };
   };
 }

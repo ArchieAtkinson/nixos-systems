@@ -304,6 +304,15 @@ in
           dataDir
           stateDir
           cacheDir
+          # V2 installs plugin packages as an npm project in the config dir;
+          # only the package artifacts are writable, the policy stays read-only.
+          "${configDir}/node_modules"
+        ];
+
+        rwFiles = [
+          "${configDir}/package.json"
+          "${configDir}/bun.lock"
+          "${configDir}/package-lock.json"
         ];
 
         roDirs = [ configDir ];

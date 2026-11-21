@@ -73,6 +73,7 @@ in
       allowedPackages ? [ ],
       pathPrefix ? [ ],
       rwDirs ? [ ],
+      rwFiles ? [ ],
       roDirs ? [ ],
       env ? { },
       # envVar -> host file. The value is read on the host at launch, bound
@@ -134,6 +135,17 @@ in
         args+=(--bind "$dir" "$dir")
       '') rwDirs;
 
+      # File binds need an existing file, not a directory. Seed an empty JSON
+      # file so package managers do not choke on a zero-byte package.json.
+      rwFileArgs = lib.concatMapStringsSep "\n" (file: ''
+        file=${dquote file}
+        touch "$file"
+        if [ ! -s "$file" ] && [ "''${file##*.}" = "json" ]; then
+          printf '{}\n' > "$file"
+        fi
+        args+=(--bind "$file" "$file")
+      '') rwFiles;
+
       envArgs = lib.concatStringsSep "\n" (
         lib.mapAttrsToList (key: value: ''
           args+=(--setenv ${key} ${dquote value})
@@ -160,10 +172,10 @@ in
         set -e
         ${secretExports}
         ${socat} TCP-LISTEN:3128,bind=127.0.0.1,reuseaddr,fork \
-          UNIX-CONNECT:/run/ai-relay/http.sock &
+          UNIX-CONNECT:/run/ai-relay/http.sock >/dev/null 2>&1 &
         for port in $AI_SANDBOX_FORWARD_PORTS; do
           ${socat} TCP-LISTEN:"$port",bind=127.0.0.1,reuseaddr,fork \
-            UNIX-CONNECT:"/run/ai-relay/forward-$port.sock" &
+            UNIX-CONNECT:"/run/ai-relay/forward-$port.sock" >/dev/null 2>&1 &
         done
         for port in 3128 $AI_SANDBOX_FORWARD_PORTS; do
           for _ in {1..50}; do
@@ -402,6 +414,7 @@ in
 
         ${roArgs}
         ${rwArgs}
+        ${rwFileArgs}
 
         ${deviceArgs}
 
@@ -510,12 +523,12 @@ in
         mkdir -p "$relay_dir"
         chmod 700 "$relay_dir"
         ${socat} "UNIX-LISTEN:$relay_dir/http.sock,fork,unlink-early,mode=600" \
-          "TCP:127.0.0.1:$squid_port" &
+          "TCP:127.0.0.1:$squid_port" >/dev/null 2>&1 &
         relay_pids+=($!)
 
         for port in $forward_ports; do
           ${socat} "UNIX-LISTEN:$relay_dir/forward-$port.sock,fork,unlink-early,mode=600" \
-            "TCP:127.0.0.1:$port" &
+            "TCP:127.0.0.1:$port" >/dev/null 2>&1 &
           relay_pids+=($!)
         done
 

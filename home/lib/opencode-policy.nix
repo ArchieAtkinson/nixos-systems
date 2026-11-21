@@ -158,7 +158,22 @@ in
   update = "disable";
   share = "disabled";
 
+  # Plugins are resolved at startup and pinned for reproducibility.
+  # Context pruning is left to the native compaction settings above.
+  plugins = [
+    "superpowers@git+https://github.com/obra/superpowers.git#22f0b463e7a5e579904dd6211a520321035526f7"
+    "opencode-planning-with-files@1.2.0"
+  ];
+
   default_agent = "build";
+
+  # Compact earlier than default and keep more recent detail verbatim.
+  compaction = {
+    auto = true;
+    background = true;
+    keep.tokens = 24000;
+    buffer = "20%";
+  };
 
   # Exa hosted MCP, no key.
   websearch = {
@@ -175,7 +190,7 @@ in
     plan = {
       mode = "primary";
       description = "Read-only planning for broad, multi-file work";
-      model = "opencode-go/glm-5.3#high";
+      model = "opencode-go/glm-5.3-flash#high";
       color = "#bb9af7";
       system = "Plan-only mode. Explore broadly before concluding: read the relevant modules and trace how a change propagates. Present the target files, approach, risks, and verification steps. Ask when scope is ambiguous. Do not edit files; shell is allowed for inspection and verification.";
       permissions = planPermissions;
@@ -241,6 +256,11 @@ in
           effect = "deny";
         }
       ];
+    };
+
+    # summaries are mechanical; use the cheap model for them.
+    compaction = {
+      model = "opencode-go/deepseek-v4.1-flash#low";
     };
   };
 
